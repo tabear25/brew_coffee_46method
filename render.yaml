@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: brew-46method
+    runtime: static
+    buildCommand: npm install && npx vite build
+    staticPublishPath: ./dist/public
+    envVars:
+      - key: NPM_CONFIG_PRODUCTION
+        value: "false"
