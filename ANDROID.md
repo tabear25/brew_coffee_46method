@@ -7,10 +7,12 @@
 すでに組み込まれています。React/Vite で作られた既存の Web アプリを **ネイティブ WebView で包む**方式のため、
 アプリのロジックや UI（`client/` 配下）はそのまま再利用されます。
 
-> ⚠️ **このクラウド実行環境ではビルドできません。**
-> 本リモート環境はネットワーク許可リスト方式で、Android SDK 本体や Google Maven リポジトリ
-> （`dl.google.com` / `maven.google.com`）がブロックされています。そのため `gradlew assembleDebug` 等の
-> 実ビルドは失敗します。**APK の生成は、以下の手順に沿って手元の PC（Android Studio）で行ってください。**
+> ⚠️ **クラウド実行環境（Claude Code on the web）の既定設定ではビルドできません。**
+> 既定の **Trusted** ネットワークポリシーには Android SDK 本体や Google Maven リポジトリ
+> （`dl.google.com` / `maven.google.com`）が含まれず、ブロックされます。そのため既定のままだと
+> `gradlew assembleDebug` 等の実ビルドは失敗します。
+> **手元の PC（Android Studio）でビルドする場合は §1〜§2 を、クラウド環境でビルドしたい場合は
+> [§7 クラウド実行環境でビルドする](#7-クラウド実行環境claude-code-on-the-webでビルドする) を参照してください。**
 
 ---
 
@@ -153,7 +155,71 @@ Google Play で配布するには署名済みの **AAB（Android App Bundle）**
 
 ---
 
+## 7. クラウド実行環境（Claude Code on the web）でビルドする
+
+手元の PC ではなく、クラウド実行環境（claude.ai/code）で APK を生成したい場合は、
+**ネットワーク許可リスト（allowlist）に Android ビルド用ドメインを追加**する必要があります。
+既定の **Trusted** ポリシーには以下が含まれておらず、追加しないとビルドが失敗します。
+
+### 追加するドメイン
+
+| ドメイン | 用途 | 重要度 |
+|---|---|---|
+| `dl.google.com` | **Android SDK 本体 ＋ Google Maven（AGP / AndroidX）の配布元** | **必須** |
+| `maven.google.com` | Google Maven のエイリアス | 推奨（保険） |
+| `*.gradle.org` | Gradle 配布・Gradle プラグインポータル | 推奨（保険） |
+
+> `repo1.maven.org`（Maven Central）と `services.gradle.org`（Gradle 配布）は既定の Trusted で到達可能。
+> 事実上の唯一のブロッカーは **`dl.google.com`** です。
+
+### 許可リストの編集手順（環境設定 ＝ Web の操作）
+
+allowlist は**環境（Environment）のネットワークポリシー**設定で、コンテナ内からは変更できません。
+
+1. **claude.ai/code** で対象の環境を開いて編集（クラウドアイコン → 環境を編集）
+2. ダイアログの **Network access** セレクタで **Custom** を選択
+3. 現れた **Allowed domains** 欄に上記ドメインを 1 行ずつ入力
+4. **「Also include default list of common package managers」にチェック**
+   （npm / GitHub 等の既定許可を残すため。外すと既存の到達先まで失われる）
+5. 保存
+
+> - 変更が**実行中のコンテナへ即時反映されるとは限らない**（新しいセッション / 再起動で適用される場合がある）。
+>   反映後に `curl -I https://dl.google.com/...` 等で到達を確認してからビルドすること。
+> - `Full`（全ドメイン許可）でも可能だが、セキュリティ上は上記の **Custom + 限定ドメイン**を推奨。
+> - 詳細: [Claude Code on the web — Network access](https://code.claude.com/docs/en/claude-code-on-the-web#network-access)
+
+### 反映後のビルド手順（SDK が未導入のクリーン環境）
+
+クラウド環境には Android SDK が無いため、command-line tools から導入する。
+
+```bash
+# 1. Android command-line tools を取得・展開（dl.google.com 到達が前提）
+export ANDROID_HOME="$HOME/android-sdk"
+mkdir -p "$ANDROID_HOME/cmdline-tools"
+curl -fsSL -o /tmp/cmdtools.zip \
+  https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+unzip -q /tmp/cmdtools.zip -d "$ANDROID_HOME/cmdline-tools"
+mv "$ANDROID_HOME/cmdline-tools/cmdline-tools" "$ANDROID_HOME/cmdline-tools/latest"
+export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH"
+
+# 2. 必要コンポーネントの導入＋ライセンス同意
+yes | sdkmanager --licenses
+sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+
+# 3. Web をビルドして Android へ同期 → APK ビルド
+npm install
+npm run build:android        # vite build && cap sync android
+cd android && ./gradlew assembleDebug
+#   → android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+> JDK は環境に含まれる JDK 17+ を使用（このリポジトリの検証環境では JDK 21 / Gradle 8.14 を確認済み）。
+> `ANDROID_HOME` を設定していれば `android/local.properties` は不要（設定する場合は `sdk.dir` を記載）。
+
+---
+
 ## 参考リンク
 - Capacitor Android: https://capacitorjs.com/docs/android
 - Capacitor Workflow: https://capacitorjs.com/docs/basics/workflow
 - Android 公式（アプリ署名）: https://developer.android.com/studio/publish/app-signing
+- Claude Code on the web（Network access）: https://code.claude.com/docs/en/claude-code-on-the-web#network-access

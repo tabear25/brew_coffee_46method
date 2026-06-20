@@ -72,8 +72,9 @@ brew_cofee_46method/
 - `android/` 配下のビルド生成物・`local.properties`・コピーされた web 資産は `android/.gitignore` で除外済み
   （プロジェクト構成自体はコミットする）。
 - **ビルド環境の制約**: APK の実ビルドには Android SDK / Google Maven（`dl.google.com`）への到達が必要。
-  ネットワーク許可リストでブロックされる環境（一部のクラウド実行環境を含む）では `gradlew` ビルドが失敗する。
-  手元での APK ビルド手順・前提ツールは [ANDROID.md](ANDROID.md) を参照。
+  ネットワーク許可リストでブロックされる環境（Claude Code on the web の既定 Trusted を含む）では `gradlew` ビルドが失敗する。
+  手元での APK ビルド手順・前提ツールは [ANDROID.md](ANDROID.md)、クラウド環境で許可リスト（`dl.google.com` 等）を
+  追加してビルドする手順は ANDROID.md の「§7 クラウド実行環境でビルドする」を参照。
 
 ## 作業ブランチ
 
