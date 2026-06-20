@@ -28,6 +28,8 @@
 | `npm run start` | 本番モードでサーバー起動（`node dist/index.cjs`、要 `npm run build`） |
 | `npm run check` | 型チェック（`tsc`） |
 | `npm run db:push` | Drizzle のスキーマを SQLite（`data.db`）に反映（`drizzle-kit push`） |
+| `npm run build:android` | **Android 向けビルド**（`vite build` → `cap sync android`）。詳細は [ANDROID.md](ANDROID.md) |
+| `npm run open:android` | Android Studio で `android/` プロジェクトを開く（`cap open android`） |
 
 > ℹ️ 計算機だけを使う / 配布するなら `npm run build:static` で完結します。抽出ログ機能を試すときだけ `npm run dev`（フルスタック）を使ってください。
 
@@ -128,6 +130,20 @@ npm run db:push  # 初回のみ: Drizzle スキーマを data.db に反映
 npm run build    # クライアント + サーバーを一括ビルド
 npm run start    # dist/index.cjs を本番モードで起動
 ```
+
+## Android アプリ（Capacitor）
+
+同じ Web アプリを [Capacitor](https://capacitorjs.com/) で **Android アプリ（APK / AAB）**化できます。既存の Vite ビルド成果物（`dist/public`）をネイティブ WebView で包む方式のため、`client/` 配下の React コード・計算ロジックはそのまま再利用され、UI の書き直しは不要です。Android プロジェクトは `android/`（`cap add android` で生成済み）にあります。
+
+```bash
+npm install
+npm run build:android   # vite build → cap sync android
+npm run open:android    # Android Studio で開いて Build ▸ Build APK
+```
+
+- 初期設定: appId `com.tabear25.brew46` / appName `Coffee 4:6`（`capacitor.config.ts`）
+- **必要な前提ツール（Android Studio / SDK / JDK）、デバッグ・署名 APK のビルド手順、トラブルシューティングは [ANDROID.md](ANDROID.md) にまとめてあります。**
+- Web 側（`client/`）を変更したら、`npm run build:android` で再同期してから Android をビルドしてください。
 
 ## デプロイ（Render）
 
