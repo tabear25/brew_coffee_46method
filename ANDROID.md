@@ -10,7 +10,41 @@
 > ⚠️ **このクラウド実行環境ではビルドできません。**
 > 本リモート環境はネットワーク許可リスト方式で、Android SDK 本体や Google Maven リポジトリ
 > （`dl.google.com` / `maven.google.com`）がブロックされています。そのため `gradlew assembleDebug` 等の
-> 実ビルドは失敗します。**APK の生成は、以下の手順に沿って手元の PC（Android Studio）で行ってください。**
+> 実ビルドは失敗します。**APK の生成は、(A) GitHub Actions で自動ビルドするか、(B) 以下の手順に沿って
+> 手元の PC（Android Studio）で行ってください。**
+
+---
+
+## 0. （推奨）GitHub Actions で APK を自動ビルドしてダウンロード
+
+Android Studio を用意しなくても、**GitHub 上で APK をビルドして直接ダウンロード**できます。
+CI ランナー（GitHub ホスト）は Google Maven へ到達できるため、ローカル環境の制約に左右されません。
+
+ワークフロー定義: [`.github/workflows/android-apk.yml`](.github/workflows/android-apk.yml)
+
+### 使い方
+
+1. **自動実行**: `main` または `claude/**` ブランチへ push すると自動でビルドが走ります。
+2. **手動実行**: GitHub の **Actions** タブ ▸ 「Build Android APK」 ▸ **Run workflow** から任意のブランチでビルド。
+3. **APK のダウンロード**:
+   - 対象の実行（run）を開き、ページ下部の **Artifacts** にある `coffee-46-debug-apk` をダウンロード。
+   - ZIP で落ちてくるので展開すると `app-debug.apk` が入っています。
+4. **端末へインストール**: その `app-debug.apk` をスマホに転送し、ファイルから開いてインストール
+   （「提供元不明のアプリ」の許可が必要な場合あり）。または `adb install app-debug.apk`。
+
+### タグでリリース配布する場合
+
+`v1.0` のような **`v` で始まるタグ**を push すると、APK が自動で **GitHub Release** に添付されます。
+
+```bash
+git tag v1.0
+git push origin v1.0
+```
+
+→ リポジトリの **Releases** ページから誰でも APK をダウンロードできる状態になります。
+
+> このワークフローが生成するのは**デバッグ署名の APK**（個人利用・動作確認向け）です。
+> Google Play で配布する署名付き AAB は「4. リリース用（署名付き）APK / AAB の作成」を参照してください。
 
 ---
 
