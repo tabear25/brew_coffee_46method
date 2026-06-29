@@ -3,6 +3,10 @@
 
 export type FlavorBalance = "sweet" | "balanced" | "bright";
 export type StrengthLevel = "light" | "medium" | "strong";
+export type BrewMethod = "4:6" | "10:10";
+
+// 4:6 では flavor / strength、10:10 では bloom（蒸らし）/ pour（通常注湯）を使う
+export type PourPhase = "flavor" | "strength" | "bloom" | "pour";
 
 export interface PourStep {
   pourNumber: number;
@@ -10,20 +14,22 @@ export interface PourStep {
   cumulativeWater: number; // grams
   timeStart: string; // mm:ss
   purpose: string;
-  phase: "flavor" | "strength";
+  phase: PourPhase;
 }
 
 export interface BrewRecipe {
   coffeeGrams: number;
   totalWater: number;
   ratio: string;
-  flavorWater: number; // 40%
-  strengthWater: number; // 60%
+  method: BrewMethod;
   pourSteps: PourStep[];
   totalPours: number;
   estimatedBrewTime: string;
-  flavorBalance: FlavorBalance;
-  strengthLevel: StrengthLevel;
+  // 4:6 メソッド固有（10:10 では未使用）
+  flavorWater?: number; // 40%
+  strengthWater?: number; // 60%
+  flavorBalance?: FlavorBalance;
+  strengthLevel?: StrengthLevel;
 }
 
 function formatTime(seconds: number): string {
@@ -131,6 +137,7 @@ export function calculateRecipe(
     coffeeGrams,
     totalWater,
     ratio: "1:15",
+    method: "4:6",
     flavorWater,
     strengthWater,
     pourSteps,
@@ -140,6 +147,64 @@ export function calculateRecipe(
     strengthLevel,
   };
 }
+
+// 10:10 メソッド（粕谷哲）
+// ルール:
+//   1. 目標とする総湯量を 10 等分し、蒸らしを含め全 10 投を均等量で注ぐ
+//   2. 1 投目（蒸らし）のみ 45 秒、2 投目以降は 30 秒間隔
+//   3. 総湯量は 4:6 と同じ 1:15 比率で算出（例: 20g → 300g → 30g × 10 投）
+// タイム: 0:00 / 0:45 / 1:15 / 1:45 / 2:15 / 2:45 / 3:15 / 3:45 / 4:15 / 4:45
+export function calculateRecipe1010(coffeeGrams: number): BrewRecipe {
+  const totalWater = coffeeGrams * 15;
+  const pourCount = 10;
+  const basePour = Math.round(totalWater / pourCount);
+
+  const bloomSeconds = 45; // 1 投目（蒸らし）の保持時間
+  const intervalSeconds = 30; // 2 投目以降の間隔
+
+  const pourSteps: PourStep[] = [];
+  let cumulative = 0;
+
+  for (let i = 0; i < pourCount; i++) {
+    // 端数は最終投で吸収し、累計が総湯量と一致するようにする
+    const amount = i === pourCount - 1 ? totalWater - cumulative : basePour;
+    cumulative += amount;
+    // 1 投目: 0 秒 / 2 投目以降: 45 秒 + (順番 - 2) × 30 秒
+    const timeSeconds = i === 0 ? 0 : bloomSeconds + (i - 1) * intervalSeconds;
+    pourSteps.push({
+      pourNumber: i + 1,
+      waterAmount: amount,
+      cumulativeWater: cumulative,
+      timeStart: formatTime(timeSeconds),
+      purpose: i === 0 ? "蒸らし" : `${i + 1}投目`,
+      phase: i === 0 ? "bloom" : "pour",
+    });
+  }
+
+  return {
+    coffeeGrams,
+    totalWater,
+    ratio: "1:15",
+    method: "10:10",
+    pourSteps,
+    totalPours: pourCount,
+    // 10:10 は投数・間隔が固定のため、目標抽出時間も湯量によらず一定
+    estimatedBrewTime: "3:30〜4:30",
+  };
+}
+
+export const BREW_METHODS = [
+  {
+    value: "4:6" as const,
+    label: "4:6 メソッド",
+    description: "前半40%(味)/後半60%(濃度)。味と濃度を調整",
+  },
+  {
+    value: "10:10" as const,
+    label: "10:10 メソッド",
+    description: "湯量を10等分。蒸らし45秒＋以降30秒間隔で10投",
+  },
+];
 
 export const ROAST_LEVELS = [
   { value: "light", label: "浅煎り", emoji: "🫘" },

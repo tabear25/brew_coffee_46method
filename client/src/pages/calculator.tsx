@@ -1,10 +1,14 @@
 import { useState, useMemo } from "react";
 import {
   calculateRecipe,
+  calculateRecipe1010,
+  BREW_METHODS,
   FLAVOR_BALANCES,
   STRENGTH_LEVELS,
+  type BrewMethod,
   type FlavorBalance,
   type StrengthLevel,
+  type PourPhase,
 } from "@/lib/brew-calculator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -12,18 +16,54 @@ import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
 import { Droplets, Timer, ArrowDown } from "lucide-react";
 
+// phase ごとのバッジ表記
+const PHASE_BADGE: Record<PourPhase, string> = {
+  flavor: "味",
+  strength: "濃度",
+  bloom: "蒸らし",
+  pour: "注湯",
+};
+
 export default function CalculatorPage() {
+  const [method, setMethod] = useState<BrewMethod>("4:6");
   const [coffeeGrams, setCoffeeGrams] = useState(20);
   const [flavorBalance, setFlavorBalance] = useState<FlavorBalance>("balanced");
   const [strengthLevel, setStrengthLevel] = useState<StrengthLevel>("medium");
 
   const recipe = useMemo(
-    () => calculateRecipe(coffeeGrams, flavorBalance, strengthLevel),
-    [coffeeGrams, flavorBalance, strengthLevel]
+    () =>
+      method === "10:10"
+        ? calculateRecipe1010(coffeeGrams)
+        : calculateRecipe(coffeeGrams, flavorBalance, strengthLevel),
+    [method, coffeeGrams, flavorBalance, strengthLevel]
   );
 
   return (
     <div className="space-y-6">
+      {/* Method selector */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-semibold">抽出メソッド</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {BREW_METHODS.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => setMethod(opt.value)}
+              className={`text-left px-3 py-2.5 rounded-lg border transition-colors ${
+                method === opt.value
+                  ? "border-primary bg-primary/5"
+                  : "border-transparent hover:bg-muted/50"
+              }`}
+              data-testid={`method-${opt.value}`}
+            >
+              <div className="text-sm font-medium">{opt.label}</div>
+              <div className="text-xs text-muted-foreground mt-0.5">{opt.description}</div>
+            </button>
+          ))}
+        </CardContent>
+      </Card>
+
       {/* Coffee amount input */}
       <Card>
         <CardHeader className="pb-3">
@@ -67,7 +107,8 @@ export default function CalculatorPage() {
         </CardContent>
       </Card>
 
-      {/* Flavor & Strength */}
+      {/* Flavor & Strength (4:6 メソッドのみ) */}
+      {method === "4:6" && (
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Card>
           <CardHeader className="pb-3">
@@ -121,6 +162,7 @@ export default function CalculatorPage() {
           </CardContent>
         </Card>
       </div>
+      )}
 
       {/* Pour Steps */}
       <Card>
@@ -145,7 +187,7 @@ export default function CalculatorPage() {
                   {/* Step indicator */}
                   <div
                     className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold shrink-0 ${
-                      step.phase === "flavor"
+                      step.phase === "flavor" || step.phase === "bloom"
                         ? "bg-primary/10 text-primary"
                         : "bg-muted text-muted-foreground"
                     }`}
@@ -162,7 +204,7 @@ export default function CalculatorPage() {
                         variant="outline"
                         className="text-[10px] px-1.5 py-0"
                       >
-                        {step.phase === "flavor" ? "味" : "濃度"}
+                        {PHASE_BADGE[step.phase]}
                       </Badge>
                     </div>
                     <div className="flex items-center gap-3 mt-0.5">
