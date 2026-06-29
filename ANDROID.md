@@ -57,7 +57,7 @@ git push origin v1.0
 | Android SDK Platform | **API 34 以上** | コンパイル対象 |
 | Android SDK Build-Tools | 最新 | APK ビルド |
 | Android SDK Platform-Tools | 最新 | `adb`（実機転送） |
-| JDK | **17 以上** | Gradle 実行（Android Studio 同梱の JBR で可） |
+| JDK | **21**（推奨） | Gradle 実行（Capacitor 8 の Android ライブラリは Java 21 でコンパイルされるため、JDK 21 が必要。Android Studio 同梱の JBR で可） |
 
 ### SDK のセットアップ手順
 1. Android Studio を起動 → **More Actions ▸ SDK Manager**（または Settings ▸ Languages & Frameworks ▸ Android SDK）。
