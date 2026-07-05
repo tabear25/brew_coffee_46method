@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import {
   calculateRecipe,
   calculateRecipe1010,
+  calculateLatteRecipe,
   BREW_METHODS,
   FLAVOR_BALANCES,
   STRENGTH_LEVELS,
@@ -29,13 +30,17 @@ export default function CalculatorPage() {
   const [coffeeGrams, setCoffeeGrams] = useState(20);
   const [flavorBalance, setFlavorBalance] = useState<FlavorBalance>("balanced");
   const [strengthLevel, setStrengthLevel] = useState<StrengthLevel>("medium");
+  const [latteWater, setLatteWater] = useState(150);
+  const [milkRatio, setMilkRatio] = useState(2);
 
   const recipe = useMemo(
     () =>
-      method === "10:10"
-        ? calculateRecipe1010(coffeeGrams)
-        : calculateRecipe(coffeeGrams, flavorBalance, strengthLevel),
-    [method, coffeeGrams, flavorBalance, strengthLevel]
+      method === "latte"
+        ? calculateLatteRecipe(latteWater, milkRatio)
+        : method === "10:10"
+          ? calculateRecipe1010(coffeeGrams)
+          : calculateRecipe(coffeeGrams, flavorBalance, strengthLevel),
+    [method, coffeeGrams, flavorBalance, strengthLevel, latteWater, milkRatio]
   );
 
   return (
@@ -64,7 +69,50 @@ export default function CalculatorPage() {
         </CardContent>
       </Card>
 
-      {/* Coffee amount input */}
+      {/* 抽出湯量入力（カフェラテ） */}
+      {method === "latte" ? (
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-semibold">抽出湯量</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="flex-1">
+              <Slider
+                value={[latteWater]}
+                onValueChange={([v]) => setLatteWater(v)}
+                min={50}
+                max={500}
+                step={10}
+                data-testid="slider-latte-water"
+              />
+            </div>
+            <div className="flex items-center gap-1.5 min-w-[80px]">
+              <Input
+                type="number"
+                value={latteWater}
+                onChange={(e) => {
+                  const v = parseFloat(e.target.value);
+                  if (!isNaN(v) && v >= 10 && v <= 1000) setLatteWater(v);
+                }}
+                className="w-16 h-8 text-center text-sm font-medium tabular-nums"
+                data-testid="input-latte-water"
+              />
+              <span className="text-sm text-muted-foreground">g</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+            <div className="flex items-center gap-1.5">
+              <span>豆 <span className="font-medium text-foreground tabular-nums">{recipe.coffeeGrams}g</span></span>
+            </div>
+            <div className="text-xs">
+              比率 {recipe.ratio}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      ) : (
+      /* Coffee amount input */
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base font-semibold">豆の量</CardTitle>
@@ -106,6 +154,63 @@ export default function CalculatorPage() {
           </div>
         </CardContent>
       </Card>
+      )}
+
+      {/* ミルクの割合（カフェラテのみ） */}
+      {method === "latte" && (
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-semibold">
+            ミルクの割合
+            <span className="text-xs font-normal text-muted-foreground ml-2">
+              コーヒー : ミルク = 1 : {milkRatio}
+            </span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="flex-1">
+              <Slider
+                value={[milkRatio]}
+                onValueChange={([v]) => setMilkRatio(v)}
+                min={0.5}
+                max={3}
+                step={0.1}
+                data-testid="slider-milk-ratio"
+              />
+            </div>
+            <div className="flex items-center gap-1.5 min-w-[80px]">
+              <Input
+                type="number"
+                value={milkRatio}
+                onChange={(e) => {
+                  const v = parseFloat(e.target.value);
+                  if (!isNaN(v) && v >= 0.1 && v <= 5) setMilkRatio(v);
+                }}
+                step={0.1}
+                className="w-16 h-8 text-center text-sm font-medium tabular-nums"
+                data-testid="input-milk-ratio"
+              />
+              <span className="text-sm text-muted-foreground">倍</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-4 text-sm">
+            <div className="flex items-center gap-1.5 text-muted-foreground">
+              <Droplets className="w-3.5 h-3.5" />
+              <span>
+                必要ミルク量{" "}
+                <span className="font-semibold text-foreground tabular-nums">
+                  {recipe.milkAmount}g
+                </span>
+              </span>
+            </div>
+            <div className="text-xs text-muted-foreground">
+              できあがり量 {recipe.totalWater + (recipe.milkAmount ?? 0)}g
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      )}
 
       {/* Flavor & Strength (4:6 メソッドのみ) */}
       {method === "4:6" && (

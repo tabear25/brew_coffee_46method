@@ -3,7 +3,7 @@
 
 export type FlavorBalance = "sweet" | "balanced" | "bright";
 export type StrengthLevel = "light" | "medium" | "strong";
-export type BrewMethod = "4:6" | "10:10";
+export type BrewMethod = "4:6" | "10:10" | "latte";
 
 // 4:6 では flavor / strength、10:10 では bloom（蒸らし）/ pour（通常注湯）を使う
 export type PourPhase = "flavor" | "strength" | "bloom" | "pour";
@@ -30,6 +30,9 @@ export interface BrewRecipe {
   strengthWater?: number; // 60%
   flavorBalance?: FlavorBalance;
   strengthLevel?: StrengthLevel;
+  // カフェラテ固有（他メソッドでは未使用）
+  milkAmount?: number; // 必要ミルク量 g
+  milkRatio?: number; // コーヒー1に対するミルクの倍率
 }
 
 function formatTime(seconds: number): string {
@@ -193,6 +196,60 @@ export function calculateRecipe1010(coffeeGrams: number): BrewRecipe {
   };
 }
 
+// カフェラテ用抽出
+// ルール:
+//   1. 豆量 = 抽出したい湯量の 1/10（豆:湯 = 1:10）
+//   2. 湯量を 5 等分し、5 回に分けて注ぐ（端数は最終投で吸収）
+//   3. 1 投目（蒸らし）のみ 45 秒保持、2 投目以降も 45 秒間隔
+//   4. コーヒー湯量 × ミルク比 で必要ミルク量を算出
+export function calculateLatteRecipe(
+  coffeeWater: number,
+  milkRatio: number = 2
+): BrewRecipe {
+  const totalWater = coffeeWater;
+  // 豆量 = 湯量 / 10（0.1g 精度）
+  const coffeeGrams = Math.round((coffeeWater / 10) * 10) / 10;
+
+  const pourCount = 5;
+  const basePour = Math.round(totalWater / pourCount);
+  const bloomSeconds = 45; // 1 投目（蒸らし）の保持時間
+  const intervalSeconds = 45; // 2 投目以降の間隔
+
+  const pourSteps: PourStep[] = [];
+  let cumulative = 0;
+
+  for (let i = 0; i < pourCount; i++) {
+    // 端数は最終投で吸収し、累計が総湯量と一致するようにする
+    const amount = i === pourCount - 1 ? totalWater - cumulative : basePour;
+    cumulative += amount;
+    // 1 投目: 0 秒 / 2 投目以降: 45 秒 + (順番 - 2) × 45 秒
+    const timeSeconds = i === 0 ? 0 : bloomSeconds + (i - 1) * intervalSeconds;
+    pourSteps.push({
+      pourNumber: i + 1,
+      waterAmount: amount,
+      cumulativeWater: cumulative,
+      timeStart: formatTime(timeSeconds),
+      purpose: i === 0 ? "蒸らし" : `${i + 1}投目`,
+      phase: i === 0 ? "bloom" : "pour",
+    });
+  }
+
+  const milkAmount = Math.round(totalWater * milkRatio);
+  const lastPourTime = bloomSeconds + (pourCount - 2) * intervalSeconds;
+
+  return {
+    coffeeGrams,
+    totalWater,
+    ratio: "1:10",
+    method: "latte",
+    pourSteps,
+    totalPours: pourCount,
+    estimatedBrewTime: formatTime(lastPourTime + 45),
+    milkAmount,
+    milkRatio,
+  };
+}
+
 export const BREW_METHODS = [
   {
     value: "4:6" as const,
@@ -203,6 +260,11 @@ export const BREW_METHODS = [
     value: "10:10" as const,
     label: "10:10 メソッド",
     description: "湯量を10等分。蒸らし45秒＋以降30秒間隔で10投",
+  },
+  {
+    value: "latte" as const,
+    label: "カフェラテ",
+    description: "湯量の1/10の豆で5投。ミルク量も計算",
   },
 ];
 
