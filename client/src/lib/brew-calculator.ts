@@ -3,7 +3,9 @@
 
 export type FlavorBalance = "sweet" | "balanced" | "bright";
 export type StrengthLevel = "light" | "medium" | "strong";
-export type BrewMethod = "4:6" | "10:10" | "latte";
+export type BrewMethod = "4:6" | "10:10" | "latte" | "flash";
+// フラッシュブリュー（アイス）の濃さ。総量（お湯+氷）の比率を切り替える
+export type FlashStrength = "rich" | "standard" | "light";
 
 // 4:6 では flavor / strength、10:10 では bloom（蒸らし）/ pour（通常注湯）を使う
 export type PourPhase = "flavor" | "strength" | "bloom" | "pour";
@@ -33,12 +35,40 @@ export interface BrewRecipe {
   // カフェラテ固有（他メソッドでは未使用）
   milkAmount?: number; // 必要ミルク量 g
   milkRatio?: number; // コーヒー1に対するミルクの倍率
+  // フラッシュブリュー固有（他メソッドでは未使用）
+  iceAmount?: number; // サーバーに先に入れる氷 g
+  finishedVolume?: number; // 出来上がり総量（お湯 + 氷）g
+  flashStrength?: FlashStrength;
 }
 
 function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
   return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
+// 4:6 の前半40%（味）を1投目・2投目に分割する。方向性で1投目の比率を変える。
+// 4:6 メソッドとフラッシュブリューで共通利用する。
+function splitFlavorPours(
+  flavorWater: number,
+  flavorBalance: FlavorBalance
+): [number, number] {
+  let pour1: number;
+  switch (flavorBalance) {
+    case "sweet":
+      // 1投目を少なく → 甘みが強調
+      pour1 = Math.round(flavorWater * 0.4);
+      break;
+    case "bright":
+      // 1投目を多く → 酸味・明るさが強調
+      pour1 = Math.round(flavorWater * 0.6);
+      break;
+    case "balanced":
+    default:
+      pour1 = Math.round(flavorWater / 2);
+      break;
+  }
+  return [pour1, flavorWater - pour1];
 }
 
 export function calculateRecipe(
@@ -52,26 +82,7 @@ export function calculateRecipe(
   const strengthWater = totalWater - flavorWater;
 
   // Flavor phase: 2 pours (40%)
-  let pour1: number;
-  let pour2: number;
-  
-  switch (flavorBalance) {
-    case "sweet":
-      // First pour smaller → sweeter
-      pour1 = Math.round(flavorWater * 0.4);
-      pour2 = flavorWater - pour1;
-      break;
-    case "bright":
-      // First pour larger → brighter/acidic
-      pour1 = Math.round(flavorWater * 0.6);
-      pour2 = flavorWater - pour1;
-      break;
-    case "balanced":
-    default:
-      pour1 = Math.round(flavorWater / 2);
-      pour2 = flavorWater - pour1;
-      break;
-  }
+  const [pour1, pour2] = splitFlavorPours(flavorWater, flavorBalance);
 
   // Strength phase: variable pours (60%)
   let strengthPourCount: number;
@@ -250,6 +261,99 @@ export function calculateLatteRecipe(
   };
 }
 
+// フラッシュブリュー（日本式アイスコーヒー / 急冷式）
+// 考え方:
+//   1. 出来上がり総量（お湯 + 氷）を 豆量 × 総比率 で決める（濃さプリセットで 13〜16）
+//   2. そのうち 40% を「氷」としてサーバーに先入れ、残り 60% を「お湯」として注ぐ
+//      → お湯:氷 ≒ 1.5:1（ユーザー指定の 豆:お湯:氷 = 1:10:6〜7 と整合）
+//   3. お湯は 4:6 構造で分割（前半40%=味 / 後半60%=濃度、45秒間隔）し、氷めがけて落として急冷する
+//   例: 豆20g・標準(1:15) → 総量300g / 氷120g / お湯180g（豆:お湯:氷 = 1:9:6 ＝ 粕谷式アイス4:6）
+const FLASH_TOTAL_RATIO: Record<FlashStrength, number> = {
+  rich: 13, // しっかり濃いめ（例: 1:8:5）
+  standard: 15, // 標準（粕谷式アイス4:6 ＝ 1:9:6）
+  light: 16, // ライト（例: 1:10:6.5）
+};
+const FLASH_ICE_FRACTION = 0.4; // 出来上がり総量に対する氷の割合
+
+export function calculateFlashRecipe(
+  coffeeGrams: number,
+  flavorBalance: FlavorBalance = "balanced",
+  flashStrength: FlashStrength = "standard"
+): BrewRecipe {
+  const totalRatio = FLASH_TOTAL_RATIO[flashStrength];
+  const finishedVolume = Math.round(coffeeGrams * totalRatio); // 出来上がり総量（お湯 + 氷）
+  const iceAmount = Math.round(finishedVolume * FLASH_ICE_FRACTION); // 先に入れる氷
+  const hotWater = finishedVolume - iceAmount; // 実際に注ぐお湯（注湯合計と一致）
+
+  // お湯を 4:6 構造で分割（前半40%=味 / 後半60%=濃度）
+  const flavorWater = Math.round(hotWater * 0.4);
+  const strengthWater = hotWater - flavorWater;
+  const [pour1, pour2] = splitFlavorPours(flavorWater, flavorBalance);
+
+  const strengthPourCount = 3; // 後半（濃度）は3投固定
+  const strengthPourAmount = Math.round(strengthWater / strengthPourCount);
+  const strengthRemainder = strengthWater - strengthPourAmount * (strengthPourCount - 1);
+
+  const pourSteps: PourStep[] = [];
+  let cumulative = 0;
+  const intervalSeconds = 45;
+
+  // Pour 1 / 2（味）
+  cumulative += pour1;
+  pourSteps.push({
+    pourNumber: 1,
+    waterAmount: pour1,
+    cumulativeWater: cumulative,
+    timeStart: formatTime(0),
+    purpose: "蒸らし + 味の方向性",
+    phase: "flavor",
+  });
+  cumulative += pour2;
+  pourSteps.push({
+    pourNumber: 2,
+    waterAmount: pour2,
+    cumulativeWater: cumulative,
+    timeStart: formatTime(intervalSeconds),
+    purpose: "味のバランス調整",
+    phase: "flavor",
+  });
+
+  // 濃度パート（氷めがけて注ぐ）
+  for (let i = 0; i < strengthPourCount; i++) {
+    const amount = i === strengthPourCount - 1 ? strengthRemainder : strengthPourAmount;
+    cumulative += amount;
+    pourSteps.push({
+      pourNumber: i + 3,
+      waterAmount: amount,
+      cumulativeWater: cumulative,
+      timeStart: formatTime((i + 2) * intervalSeconds),
+      purpose: i === 0 ? "濃度調整 開始（氷に落とす）" : "濃度調整",
+      phase: "strength",
+    });
+  }
+
+  const totalPours = 2 + strengthPourCount;
+  const lastPourTime = (totalPours - 1) * intervalSeconds;
+
+  // 豆:お湯:氷 の実比率（0.1精度）
+  const hotRatio = Math.round((hotWater / coffeeGrams) * 10) / 10;
+  const iceRatio = Math.round((iceAmount / coffeeGrams) * 10) / 10;
+
+  return {
+    coffeeGrams,
+    totalWater: hotWater, // 注ぐお湯（pourSteps の合計と一致）
+    ratio: `1:${hotRatio}:${iceRatio}`, // 豆:お湯:氷
+    method: "flash",
+    pourSteps,
+    totalPours,
+    estimatedBrewTime: formatTime(lastPourTime + 45),
+    flavorBalance,
+    iceAmount,
+    finishedVolume,
+    flashStrength,
+  };
+}
+
 export const BREW_METHODS = [
   {
     value: "4:6" as const,
@@ -265,6 +369,11 @@ export const BREW_METHODS = [
     value: "latte" as const,
     label: "カフェラテ",
     description: "湯量の1/10の豆で5投。ミルク量も計算",
+  },
+  {
+    value: "flash" as const,
+    label: "アイス（フラッシュブリュー）",
+    description: "氷に熱湯を落として急冷。濃いめ設計のアイスコーヒー",
   },
 ];
 
@@ -286,4 +395,11 @@ export const STRENGTH_LEVELS = [
   { value: "light" as const, label: "軽め", description: "後半2回 → さっぱりした味わい" },
   { value: "medium" as const, label: "標準", description: "後半3回 → バランスの取れた濃度" },
   { value: "strong" as const, label: "濃いめ", description: "後半4回 → しっかりした濃度" },
+];
+
+// フラッシュブリューの濃さ（総量＝お湯+氷の比率）。氷は総量の40%で一定。
+export const FLASH_STRENGTHS = [
+  { value: "rich" as const, label: "しっかり濃いめ", description: "豆:湯:氷 ≒ 1:8:5（総量 1:13）" },
+  { value: "standard" as const, label: "標準", description: "豆:湯:氷 ≒ 1:9:6（総量 1:15・粕谷式）" },
+  { value: "light" as const, label: "ライト", description: "豆:湯:氷 ≒ 1:10:6.5（総量 1:16）" },
 ];

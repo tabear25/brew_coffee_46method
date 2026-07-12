@@ -3,19 +3,22 @@ import {
   calculateRecipe,
   calculateRecipe1010,
   calculateLatteRecipe,
+  calculateFlashRecipe,
   BREW_METHODS,
   FLAVOR_BALANCES,
   STRENGTH_LEVELS,
+  FLASH_STRENGTHS,
   type BrewMethod,
   type FlavorBalance,
   type StrengthLevel,
+  type FlashStrength,
   type PourPhase,
 } from "@/lib/brew-calculator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
-import { Droplets, Timer, ArrowDown } from "lucide-react";
+import { Droplets, Timer, ArrowDown, Snowflake } from "lucide-react";
 
 // phase ごとのバッジ表記
 const PHASE_BADGE: Record<PourPhase, string> = {
@@ -32,6 +35,7 @@ export default function CalculatorPage() {
   const [strengthLevel, setStrengthLevel] = useState<StrengthLevel>("medium");
   const [latteWater, setLatteWater] = useState(150);
   const [milkRatio, setMilkRatio] = useState(2);
+  const [flashStrength, setFlashStrength] = useState<FlashStrength>("standard");
 
   const recipe = useMemo(
     () =>
@@ -39,8 +43,10 @@ export default function CalculatorPage() {
         ? calculateLatteRecipe(latteWater, milkRatio)
         : method === "10:10"
           ? calculateRecipe1010(coffeeGrams)
-          : calculateRecipe(coffeeGrams, flavorBalance, strengthLevel),
-    [method, coffeeGrams, flavorBalance, strengthLevel, latteWater, milkRatio]
+          : method === "flash"
+            ? calculateFlashRecipe(coffeeGrams, flavorBalance, flashStrength)
+            : calculateRecipe(coffeeGrams, flavorBalance, strengthLevel),
+    [method, coffeeGrams, flavorBalance, strengthLevel, latteWater, milkRatio, flashStrength]
   );
 
   return (
@@ -156,6 +162,53 @@ export default function CalculatorPage() {
       </Card>
       )}
 
+      {/* 氷とお湯の内訳（フラッシュブリューのみ） */}
+      {method === "flash" && (
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-semibold flex items-center gap-1.5">
+            <Snowflake className="w-4 h-4 text-primary" />
+            氷とお湯
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <div className="rounded-lg bg-muted/50 py-2">
+              <div className="text-xs text-muted-foreground">氷（先入れ）</div>
+              <div className="text-base font-semibold tabular-nums" data-testid="flash-ice">
+                {recipe.iceAmount}g
+              </div>
+            </div>
+            <div className="rounded-lg bg-muted/50 py-2">
+              <div className="text-xs text-muted-foreground">お湯</div>
+              <div className="text-base font-semibold tabular-nums" data-testid="flash-hot">
+                {recipe.totalWater}g
+              </div>
+            </div>
+            <div className="rounded-lg bg-primary/5 py-2">
+              <div className="text-xs text-muted-foreground">出来上がり</div>
+              <div className="text-base font-semibold tabular-nums" data-testid="flash-finished">
+                {recipe.finishedVolume}g
+              </div>
+            </div>
+          </div>
+          <ul className="text-xs text-muted-foreground space-y-1 list-disc pl-4">
+            <li>
+              サーバー（下のポット）に氷{" "}
+              <span className="font-medium text-foreground tabular-nums">{recipe.iceAmount}g</span>{" "}
+              を先に入れてから抽出する。
+            </li>
+            <li>
+              お湯は下の手順どおり合計{" "}
+              <span className="font-medium text-foreground tabular-nums">{recipe.totalWater}g</span>{" "}
+              を、氷めがけて落とすイメージで注ぐ。
+            </li>
+            <li>抽出後に軽く混ぜて急冷し、氷が溶け残れば溶かしきる。足りなければ少し足す。</li>
+          </ul>
+        </CardContent>
+      </Card>
+      )}
+
       {/* ミルクの割合（カフェラテのみ） */}
       {method === "latte" && (
       <Card>
@@ -212,14 +265,16 @@ export default function CalculatorPage() {
       </Card>
       )}
 
-      {/* Flavor & Strength (4:6 メソッドのみ) */}
-      {method === "4:6" && (
+      {/* 味 & 濃度（4:6 とフラッシュブリュー） */}
+      {(method === "4:6" || method === "flash") && (
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base font-semibold">
               味の方向性
-              <span className="text-xs font-normal text-muted-foreground ml-2">前半40%</span>
+              <span className="text-xs font-normal text-muted-foreground ml-2">
+                {method === "flash" ? "お湯の前半40%" : "前半40%"}
+              </span>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
@@ -241,6 +296,7 @@ export default function CalculatorPage() {
           </CardContent>
         </Card>
 
+        {method === "4:6" ? (
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base font-semibold">
@@ -266,6 +322,33 @@ export default function CalculatorPage() {
             ))}
           </CardContent>
         </Card>
+        ) : (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-semibold">
+              濃さ
+              <span className="text-xs font-normal text-muted-foreground ml-2">氷とお湯の比率</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {FLASH_STRENGTHS.map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => setFlashStrength(opt.value)}
+                className={`w-full text-left px-3 py-2.5 rounded-lg border transition-colors ${
+                  flashStrength === opt.value
+                    ? "border-primary bg-primary/5"
+                    : "border-transparent hover:bg-muted/50"
+                }`}
+                data-testid={`flash-${opt.value}`}
+              >
+                <div className="text-sm font-medium">{opt.label}</div>
+                <div className="text-xs text-muted-foreground mt-0.5">{opt.description}</div>
+              </button>
+            ))}
+          </CardContent>
+        </Card>
+        )}
       </div>
       )}
 
