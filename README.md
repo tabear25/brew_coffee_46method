@@ -2,10 +2,6 @@
 
 [粕谷哲（Tetsu Kasuya）氏](https://www.youtube.com/@tetsukasuya)が World Brewers Cup 2016 で優勝した **4:6 メソッド**を、豆の量・味の方向性・濃度から自動でレシピ化するコーヒー抽出計算機の Web アプリです。フロントは **Vite + React 18 + TypeScript + Tailwind CSS + shadcn/ui** の SPA（ハッシュルーティング）。豆量を入れるだけで「何投目に何 g 注ぐか」「累計湯量」「目安タイム」までを即座に表示します。
 
-> ☕ **4:6 メソッドとは**: 総湯量を **前半 40%（味）** と **後半 60%（濃度）** に分けて注ぐ抽出法です。前半は 2 投に分け、1 投目を少なくすると甘め・多くすると明るめ（酸味）に寄ります。後半は注ぐ回数で濃さを調整します（少=軽め / 多=濃いめ）。このアプリは粉と湯の比率を **1:15** に固定し、注湯間隔を **45 秒** として手順を組み立てます。計算ロジックの本体は [`client/src/lib/brew-calculator.ts`](client/src/lib/brew-calculator.ts) の純粋関数 `calculateRecipe` です。
-
-> 📝 ディレクトリ名は歴史的経緯で `brew_cofee_46method`（`coffee` ではなく `cofee`）になっています。
-
 ## できること
 
 - **豆量の指定** — スライダー / 数値入力（10〜40 g、入力は 1〜60 g まで）。湯量（豆量 ×15）と比率を自動計算
@@ -15,24 +11,6 @@
 - **ライト / ダークテーマ**の切り替え
 - **抽出ログ**（任意・フルスタック構成のみ） — 豆名・産地・焙煎度・評価・メモ付きで記録を保存 / 一覧 / 削除（後述）
 
-> ℹ️ 静的サイトとしてデプロイされる本番構成では **計算機のみ**を提供します（`App.tsx` のルーターは `/` の計算機のみを登録）。抽出ログ（`logs.tsx`）は Express + SQLite を伴うフルスタック構成でのみ動作する追加機能です。
-
-## コマンド
-
-| コマンド | 用途 |
-| --- | --- |
-| `npm install` | 依存関係のインストール |
-| `npm run build:static` | **静的サイトのビルド**（`vite build` → `dist/public/`）。サーバー / DB 不要 |
-| `npm run dev` | フルスタックの開発サーバ起動（`tsx server/index.ts`、既定 http://localhost:5000 ） |
-| `npm run build` | クライアント + サーバーの一括ビルド（`script/build.ts` → `dist/public/` と `dist/index.cjs`） |
-| `npm run start` | 本番モードでサーバー起動（`node dist/index.cjs`、要 `npm run build`） |
-| `npm run check` | 型チェック（`tsc`） |
-| `npm run db:push` | Drizzle のスキーマを SQLite（`data.db`）に反映（`drizzle-kit push`） |
-| `npm run build:android` | **Android 向けビルド**（`vite build` → `cap sync android`）。詳細は [ANDROID.md](ANDROID.md) |
-| `npm run open:android` | Android Studio で `android/` プロジェクトを開く（`cap open android`） |
-
-> ℹ️ 計算機だけを使う / 配布するなら `npm run build:static` で完結します。抽出ログ機能を試すときだけ `npm run dev`（フルスタック）を使ってください。
-
 ## 前提条件
 
 - Node.js（推奨 v20+）
@@ -41,16 +19,6 @@
   ```bash
   npm install
   ```
-
-> 💡 この PC にはシステム Node/npm が無いため、ポータブル Node を `yosakoi_formation/.tooling/node-v24.16.0-win-x64`（git 管理外）に展開して共用しています。実行時は PATH に前置きしてください。
->
-> ```powershell
-> $env:Path = "C:\Users\str06\private_workplace\yosakoi_formation\.tooling\node-v24.16.0-win-x64;$env:Path"
-> ```
->
-> 日常運用では公式 Node の導入を推奨します。
-
-> ⚠️ `dev` / `start` スクリプトは `NODE_ENV=...` を前置きする POSIX 形式です。Windows の PowerShell から直接叩くとエラーになるため、[cross-env](https://www.npmjs.com/package/cross-env) を挟むか、`$env:NODE_ENV` を設定してから実行してください。静的ビルド（`build:static`）は環境変数に依存しないのでそのまま動きます。
 
 ## アーキテクチャ
 
