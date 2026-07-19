@@ -28,6 +28,15 @@ const PHASE_BADGE: Record<PourPhase, string> = {
   pour: "注湯",
 };
 
+// 選択式ボタンの共通スタイル
+const optionButtonClass = (selected: boolean) =>
+  `pressable text-left px-3 py-2.5 rounded-lg border ${
+    selected ? "border-primary bg-primary/5" : "border-transparent hover:bg-muted/50"
+  }`;
+
+// メソッド切替で現れるカードの出現モーション（下から淡く立ち上がる）
+const CARD_ENTER = "animate-in fade-in slide-in-from-bottom-1 duration-300";
+
 export default function CalculatorPage() {
   const [method, setMethod] = useState<BrewMethod>("4:6");
   const [coffeeGrams, setCoffeeGrams] = useState(20);
@@ -61,11 +70,7 @@ export default function CalculatorPage() {
             <button
               key={opt.value}
               onClick={() => setMethod(opt.value)}
-              className={`text-left px-3 py-2.5 rounded-lg border transition-colors ${
-                method === opt.value
-                  ? "border-primary bg-primary/5"
-                  : "border-transparent hover:bg-muted/50"
-              }`}
+              className={optionButtonClass(method === opt.value)}
               data-testid={`method-${opt.value}`}
             >
               <div className="text-sm font-medium">{opt.label}</div>
@@ -164,7 +169,7 @@ export default function CalculatorPage() {
 
       {/* 氷とお湯の内訳（フラッシュブリューのみ） */}
       {method === "flash" && (
-      <Card>
+      <Card className={CARD_ENTER}>
         <CardHeader className="pb-3">
           <CardTitle className="text-base font-semibold flex items-center gap-1.5">
             <Snowflake className="w-4 h-4 text-primary" />
@@ -211,7 +216,7 @@ export default function CalculatorPage() {
 
       {/* ミルクの割合（カフェラテのみ） */}
       {method === "latte" && (
-      <Card>
+      <Card className={CARD_ENTER}>
         <CardHeader className="pb-3">
           <CardTitle className="text-base font-semibold">
             ミルクの割合
@@ -267,7 +272,7 @@ export default function CalculatorPage() {
 
       {/* 味 & 濃度（4:6 とフラッシュブリュー） */}
       {(method === "4:6" || method === "flash") && (
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className={`grid grid-cols-1 sm:grid-cols-2 gap-4 ${CARD_ENTER}`}>
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base font-semibold">
@@ -282,11 +287,7 @@ export default function CalculatorPage() {
               <button
                 key={opt.value}
                 onClick={() => setFlavorBalance(opt.value)}
-                className={`w-full text-left px-3 py-2.5 rounded-lg border transition-colors ${
-                  flavorBalance === opt.value
-                    ? "border-primary bg-primary/5"
-                    : "border-transparent hover:bg-muted/50"
-                }`}
+                className={`w-full ${optionButtonClass(flavorBalance === opt.value)}`}
                 data-testid={`flavor-${opt.value}`}
               >
                 <div className="text-sm font-medium">{opt.label}</div>
@@ -309,11 +310,7 @@ export default function CalculatorPage() {
               <button
                 key={opt.value}
                 onClick={() => setStrengthLevel(opt.value)}
-                className={`w-full text-left px-3 py-2.5 rounded-lg border transition-colors ${
-                  strengthLevel === opt.value
-                    ? "border-primary bg-primary/5"
-                    : "border-transparent hover:bg-muted/50"
-                }`}
+                className={`w-full ${optionButtonClass(strengthLevel === opt.value)}`}
                 data-testid={`strength-${opt.value}`}
               >
                 <div className="text-sm font-medium">{opt.label}</div>
@@ -335,11 +332,7 @@ export default function CalculatorPage() {
               <button
                 key={opt.value}
                 onClick={() => setFlashStrength(opt.value)}
-                className={`w-full text-left px-3 py-2.5 rounded-lg border transition-colors ${
-                  flashStrength === opt.value
-                    ? "border-primary bg-primary/5"
-                    : "border-transparent hover:bg-muted/50"
-                }`}
+                className={`w-full ${optionButtonClass(flashStrength === opt.value)}`}
                 data-testid={`flash-${opt.value}`}
               >
                 <div className="text-sm font-medium">{opt.label}</div>
@@ -364,7 +357,7 @@ export default function CalculatorPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="space-y-0">
+          <div key={method} className={`space-y-0 ${CARD_ENTER}`}>
             {recipe.pourSteps.map((step, i) => (
               <div key={step.pourNumber} className="relative">
                 {/* Connector line */}
@@ -385,7 +378,7 @@ export default function CalculatorPage() {
                   {/* Content */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium tabular-nums">
+                      <span className="text-base font-semibold tracking-[-0.01em] tabular-nums">
                         {step.waterAmount}g
                       </span>
                       <Badge

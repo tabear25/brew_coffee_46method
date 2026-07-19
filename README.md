@@ -109,7 +109,7 @@ npm run build:android   # vite build → cap sync android
 npm run open:android    # Android Studio で開いて Build ▸ Build APK
 ```
 
-- 初期設定: appId `com.tabear25.brew46` / appName `Coffee 4:6`（`capacitor.config.ts`）
+- 初期設定: appId `com.tabear25.brew46` / appName `Brew Mate`（`capacitor.config.ts`）
 - **必要な前提ツール（Android Studio / SDK / JDK）、デバッグ・署名 APK のビルド手順、トラブルシューティングは [ANDROID.md](ANDROID.md) にまとめてあります。**
 - Web 側（`client/`）を変更したら、`npm run build:android` で再同期してから Android をビルドしてください。
 

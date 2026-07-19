@@ -70,7 +70,7 @@ brew_cofee_46method/
 ## Android（Capacitor）構成と注意点
 
 - 方式: 既存 Vite ビルド（`dist/public`）を **ネイティブ WebView で包む** Capacitor ラップ。React/計算ロジックは無変更。
-- 設定ファイル: `capacitor.config.ts`（`appId: com.tabear25.brew46` / `appName: Coffee 4:6` / `webDir: dist/public`）。
+- 設定ファイル: `capacitor.config.ts`（`appId: com.tabear25.brew46` / `appName: Brew Mate` / `webDir: dist/public`）。
 - **重要**: `client/` の Web 側を変更したら、必ず `npm run build:android`（= `vite build && cap sync android`）で
   Android 側へ同期すること。`cap sync` を忘れると WebView が古い画面のままになる。
 - `android/` 配下のビルド生成物・`local.properties`・コピーされた web 資産は `android/.gitignore` で除外済み

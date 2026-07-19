@@ -19,7 +19,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     document.documentElement.classList.toggle("dark", theme === "dark");
   }, [theme]);
 
-  const toggleTheme = () => setTheme((t) => (t === "dark" ? "light" : "dark"));
+  const toggleTheme = () => {
+    // ダーク↔ライトの明度ジャンプを和らげる（index.css の .theme-transitioning）
+    const root = document.documentElement;
+    root.classList.add("theme-transitioning");
+    window.setTimeout(() => root.classList.remove("theme-transitioning"), 400);
+    setTheme((t) => (t === "dark" ? "light" : "dark"));
+  };
 
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme }}>

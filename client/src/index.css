@@ -44,10 +44,12 @@
   --chart-3: 15 45% 55%;
   --chart-4: 45 60% 55%;
   --chart-5: 5 50% 50%;
-  --font-sans: "Satoshi", "Inter", sans-serif;
+  --font-sans: system-ui, -apple-system, "Segoe UI Variable", "Segoe UI", "Hiragino Sans", "Noto Sans JP", "Yu Gothic UI", sans-serif;
   --font-serif: Georgia, serif;
-  --font-mono: "JetBrains Mono", Menlo, monospace;
+  --font-mono: ui-monospace, "JetBrains Mono", Menlo, monospace;
   --radius: .5rem;
+  /* Fluid motion: critically damped settle (no overshoot), response ~0.35s */
+  --ease-settle: cubic-bezier(0.22, 1, 0.36, 1);
   --shadow-2xs: 0px 1px 2px hsl(25 20% 20% / 0.04);
   --shadow-xs: 0px 1px 3px hsl(25 20% 20% / 0.06);
   --shadow-sm: 0px 2px 4px hsl(25 20% 20% / 0.06);
@@ -133,10 +135,98 @@
 
   body {
     @apply font-sans antialiased bg-background text-foreground;
+    font-optical-sizing: auto;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* テーマ切替時の明度ジャンプを和らげる（theme-provider が一時付与） */
+  .theme-transitioning,
+  .theme-transitioning *,
+  .theme-transitioning *::before,
+  .theme-transitioning *::after {
+    transition:
+      background-color 350ms var(--ease-settle),
+      border-color 350ms var(--ease-settle),
+      color 350ms var(--ease-settle) !important;
   }
 }
 
 @layer utilities {
+  /* 押下した瞬間（pointer-down）に沈み、離すとスプリング的に戻る */
+  .pressable {
+    transition:
+      transform 350ms var(--ease-settle),
+      background-color 200ms ease,
+      border-color 200ms ease,
+      opacity 200ms ease,
+      box-shadow 200ms ease;
+  }
+  .pressable:active {
+    transform: scale(0.97);
+    transition-duration: 100ms;
+  }
+
+  /* ドラッグ対象（スライダーのつまみ）: 掴んだ瞬間に育つ */
+  .grabbable {
+    transition: transform 300ms var(--ease-settle);
+  }
+  .grabbable:active {
+    transform: scale(1.2);
+    transition-duration: 100ms;
+  }
+
+  /* 半透明の浮遊クローム。コンテンツはこの下をスクロールする */
+  .chrome-material {
+    background: hsl(var(--background) / 0.72);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+  }
+
+  /* 1px の硬い区切り線の代わりに、下辺へ淡くフェードするエッジ */
+  .scroll-edge::after {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    top: 100%;
+    height: 12px;
+    pointer-events: none;
+    background: linear-gradient(to bottom, hsl(var(--foreground) / 0.06), transparent);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+    .pressable:active,
+    .grabbable:active {
+      transform: none;
+    }
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    .chrome-material {
+      background: hsl(var(--background));
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+    }
+  }
+
+  @media (prefers-contrast: more) {
+    .chrome-material {
+      background: hsl(var(--background));
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+      border-bottom: 1px solid hsl(var(--border));
+    }
+    .scroll-edge::after {
+      display: none;
+    }
+  }
+
   input[type="search"]::-webkit-search-cancel-button {
     @apply hidden;
   }
