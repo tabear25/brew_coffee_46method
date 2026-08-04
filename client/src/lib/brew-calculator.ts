@@ -34,10 +34,11 @@ export interface BrewRecipe {
   strengthLevel?: StrengthLevel;
   // カフェラテ固有（他メソッドでは未使用）
   milkAmount?: number; // 必要ミルク量 g
-  milkRatio?: number; // コーヒー1に対するミルクの倍率
+  coffeeParts?: number; // コーヒー:ミルク の配分（合計 LATTE_TOTAL_PARTS）のコーヒー側
+  milkParts?: number; // 同じくミルク側
   // フラッシュブリュー固有（他メソッドでは未使用）
   iceAmount?: number; // サーバーに先に入れる氷 g
-  finishedVolume?: number; // 出来上がり総量（お湯 + 氷）g
+  finishedVolume?: number; // 出来上がり総量（フラッシュ: お湯 + 氷 / ラテ: コーヒー + ミルク）g
   flashStrength?: FlashStrength;
 }
 
@@ -207,15 +208,22 @@ export function calculateRecipe1010(coffeeGrams: number): BrewRecipe {
   };
 }
 
+// カフェラテのコーヒー:ミルク配分。合計 LATTE_TOTAL_PARTS パートをコーヒーとミルクで分ける
+//   例: コーヒー 4 パート → 4:6（ミルクはコーヒー湯量の 6/4 = 1.5 倍）
+// コーヒー 0 パートは抽出そのものが消えてしまうため、最低 1 パート（1:9）を保証する
+export const LATTE_TOTAL_PARTS = 10;
+export const LATTE_MIN_COFFEE_PARTS = 1;
+
 // カフェラテ用抽出
 // ルール:
 //   1. 豆量 = 抽出したい湯量の 1/10（豆:湯 = 1:10）
 //   2. 湯量を 5 等分し、5 回に分けて注ぐ（端数は最終投で吸収）
 //   3. 1 投目（蒸らし）のみ 45 秒保持、2 投目以降も 45 秒間隔
-//   4. コーヒー湯量 × ミルク比 で必要ミルク量を算出
+//   4. コーヒー湯量は固定のまま、コーヒー:ミルクのパート比で必要ミルク量を算出
+//      （コーヒー湯量 × ミルクパート / コーヒーパート）
 export function calculateLatteRecipe(
   coffeeWater: number,
-  milkRatio: number = 2
+  coffeeParts: number = 4
 ): BrewRecipe {
   const totalWater = coffeeWater;
   // 豆量 = 湯量 / 10（0.1g 精度）
@@ -245,7 +253,13 @@ export function calculateLatteRecipe(
     });
   }
 
-  const milkAmount = Math.round(totalWater * milkRatio);
+  // コーヒー側は 1〜LATTE_TOTAL_PARTS に丸めて、ゼロ除算と範囲外を防ぐ
+  const parts = Math.min(
+    LATTE_TOTAL_PARTS,
+    Math.max(LATTE_MIN_COFFEE_PARTS, Math.round(coffeeParts))
+  );
+  const milkParts = LATTE_TOTAL_PARTS - parts;
+  const milkAmount = Math.round((totalWater * milkParts) / parts);
   const lastPourTime = bloomSeconds + (pourCount - 2) * intervalSeconds;
 
   return {
@@ -257,7 +271,10 @@ export function calculateLatteRecipe(
     totalPours: pourCount,
     estimatedBrewTime: formatTime(lastPourTime + 45),
     milkAmount,
-    milkRatio,
+    coffeeParts: parts,
+    milkParts,
+    // できあがり量（コーヒー + ミルク）
+    finishedVolume: totalWater + milkAmount,
   };
 }
 
