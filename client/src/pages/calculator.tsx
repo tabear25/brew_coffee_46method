@@ -135,7 +135,7 @@ export default function CalculatorPage() {
                 value={[coffeeGrams]}
                 onValueChange={([v]) => setCoffeeGrams(v)}
                 min={10}
-                max={40}
+                max={50}
                 step={1}
                 data-testid="slider-coffee-grams"
               />
