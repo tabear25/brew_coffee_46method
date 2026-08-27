@@ -8,6 +8,8 @@ import {
   FLAVOR_BALANCES,
   STRENGTH_LEVELS,
   FLASH_STRENGTHS,
+  LATTE_TOTAL_PARTS,
+  LATTE_MIN_COFFEE_PARTS,
   type BrewMethod,
   type FlavorBalance,
   type StrengthLevel,
@@ -43,19 +45,19 @@ export default function CalculatorPage() {
   const [flavorBalance, setFlavorBalance] = useState<FlavorBalance>("balanced");
   const [strengthLevel, setStrengthLevel] = useState<StrengthLevel>("medium");
   const [latteWater, setLatteWater] = useState(150);
-  const [milkRatio, setMilkRatio] = useState(2);
+  const [coffeeParts, setCoffeeParts] = useState(4);
   const [flashStrength, setFlashStrength] = useState<FlashStrength>("standard");
 
   const recipe = useMemo(
     () =>
       method === "latte"
-        ? calculateLatteRecipe(latteWater, milkRatio)
+        ? calculateLatteRecipe(latteWater, coffeeParts)
         : method === "10:10"
           ? calculateRecipe1010(coffeeGrams)
           : method === "flash"
             ? calculateFlashRecipe(coffeeGrams, flavorBalance, flashStrength)
             : calculateRecipe(coffeeGrams, flavorBalance, strengthLevel),
-    [method, coffeeGrams, flavorBalance, strengthLevel, latteWater, milkRatio, flashStrength]
+    [method, coffeeGrams, flavorBalance, strengthLevel, latteWater, coffeeParts, flashStrength]
   );
 
   return (
@@ -135,7 +137,7 @@ export default function CalculatorPage() {
                 value={[coffeeGrams]}
                 onValueChange={([v]) => setCoffeeGrams(v)}
                 min={10}
-                max={40}
+                max={50}
                 step={1}
                 data-testid="slider-coffee-grams"
               />
@@ -219,9 +221,9 @@ export default function CalculatorPage() {
       <Card className={CARD_ENTER}>
         <CardHeader className="pb-3">
           <CardTitle className="text-base font-semibold">
-            ミルクの割合
+            コーヒーとミルクの割合
             <span className="text-xs font-normal text-muted-foreground ml-2">
-              コーヒー : ミルク = 1 : {milkRatio}
+              合計 {LATTE_TOTAL_PARTS} を配分
             </span>
           </CardTitle>
         </CardHeader>
@@ -229,28 +231,29 @@ export default function CalculatorPage() {
           <div className="flex items-center gap-3">
             <div className="flex-1">
               <Slider
-                value={[milkRatio]}
-                onValueChange={([v]) => setMilkRatio(v)}
-                min={0.5}
-                max={3}
-                step={0.1}
-                data-testid="slider-milk-ratio"
+                value={[coffeeParts]}
+                onValueChange={([v]) => setCoffeeParts(v)}
+                min={LATTE_MIN_COFFEE_PARTS}
+                max={LATTE_TOTAL_PARTS}
+                step={1}
+                data-testid="slider-latte-ratio"
               />
             </div>
-            <div className="flex items-center gap-1.5 min-w-[80px]">
-              <Input
-                type="number"
-                value={milkRatio}
-                onChange={(e) => {
-                  const v = parseFloat(e.target.value);
-                  if (!isNaN(v) && v >= 0.1 && v <= 5) setMilkRatio(v);
-                }}
-                step={0.1}
-                className="w-16 h-8 text-center text-sm font-medium tabular-nums"
-                data-testid="input-milk-ratio"
-              />
-              <span className="text-sm text-muted-foreground">倍</span>
+            <div
+              className="min-w-[80px] h-8 px-2 rounded-md border border-input flex items-center justify-center text-sm font-medium tabular-nums"
+              data-testid="latte-ratio-display"
+            >
+              {recipe.coffeeParts} : {recipe.milkParts}
             </div>
+          </div>
+          {/* スライダーの左右がそのままコーヒー / ミルクに対応する */}
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span>
+              コーヒー <span className="font-medium text-foreground tabular-nums">{recipe.coffeeParts}</span>
+            </span>
+            <span>
+              ミルク <span className="font-medium text-foreground tabular-nums">{recipe.milkParts}</span>
+            </span>
           </div>
           <div className="flex items-center gap-4 text-sm">
             <div className="flex items-center gap-1.5 text-muted-foreground">
@@ -263,9 +266,14 @@ export default function CalculatorPage() {
               </span>
             </div>
             <div className="text-xs text-muted-foreground">
-              できあがり量 {recipe.totalWater + (recipe.milkAmount ?? 0)}g
+              できあがり量 {recipe.finishedVolume}g
             </div>
           </div>
+          {recipe.milkParts === 0 && (
+            <div className="text-xs text-muted-foreground">
+              ミルクなし（ブラックコーヒー）。
+            </div>
+          )}
         </CardContent>
       </Card>
       )}
