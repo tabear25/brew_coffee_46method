@@ -129,6 +129,22 @@ export function RecipeSummary({ computed }: RecipeSummaryProps) {
             </ul>
           </div>
         )}
+
+        {computed.supplementedNotes.length > 0 && (
+          <div
+            className="rounded-lg border border-border bg-muted/40 px-3 py-2.5"
+            data-testid="supplemented-notice"
+          >
+            <Badge variant="outline" className="mb-1.5 px-1.5 py-0 text-[10px]">
+              調査レポート外の補完を含みます
+            </Badge>
+            <ul className="list-inside list-disc space-y-0.5 text-[11px] text-muted-foreground">
+              {computed.supplementedNotes.map((note) => (
+                <li key={note}>{note}</li>
+              ))}
+            </ul>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

@@ -309,8 +309,24 @@ export function computeRecipe(input: ComputeRecipeInput): ComputedRecipe {
       arrangedReasons.push(`${control.label}「${selected.label}」は調査レポートに数値根拠なし`);
     }
   }
-  if (core.resolved.some((step) => step.adaptation)) {
-    arrangedReasons.push("一部の注湯開始時刻を一般に流通するタイムラインで補完");
+
+  // データ側の補完は「ユーザーによる変更」とは区別して開示する
+  const supplementedNotes: string[] = [];
+  for (const step of core.resolved) {
+    if (step.adaptation) {
+      supplementedNotes.push(`${step.title}: ${step.adaptationNote ?? "調査レポート外の補完値"}`);
+    }
+  }
+  if (recipe.reference.doseRangeIsAppDefault && recipe.reference.doseRangeG) {
+    supplementedNotes.push(
+      `推奨粉量範囲 ${recipe.reference.doseRangeG[0]}〜${recipe.reference.doseRangeG[1]}g はアプリ既定値`,
+    );
+  }
+  if (recipe.reference.temperatureIsAppDefault) {
+    supplementedNotes.push(`湯温 ${recipe.reference.temperatureC}℃ はアプリ既定値`);
+  }
+  if (recipe.reference.grind.isAppDefault) {
+    supplementedNotes.push(`挽き目「${recipe.reference.grind.label}」はアプリ既定値`);
   }
 
   return {
@@ -331,6 +347,7 @@ export function computeRecipe(input: ComputeRecipeInput): ComputedRecipe {
     warnings: buildWarnings(recipe, doseG, totalWaterG, ratio),
     isArranged: arrangedReasons.length > 0,
     arrangedReasons,
+    supplementedNotes,
   };
 }
 

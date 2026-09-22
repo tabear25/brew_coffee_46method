@@ -170,6 +170,55 @@ describe("状態条件のステップ", () => {
   });
 });
 
+describe("出典の開示", () => {
+  it("データ側の補完と、ユーザーによる変更を分けて開示する", () => {
+    // Scott Rao: 2投目の開始時刻だけをアプリ側で補完している（ユーザーは何も変えていない）
+    const rao = computeRecipe({ recipe: scottRaoV60, doseG: 20 });
+    expect(rao.isArranged).toBe(false);
+    expect(rao.arrangedReasons).toEqual([]);
+    expect(rao.supplementedNotes.join()).toContain("0:45 開始は調査レポートに記載がなく");
+
+    // 4:6 の「明るめ」はユーザーが選んだ、数値根拠のない設定
+    const bright = computeRecipe({
+      recipe: kasuya46,
+      doseG: 20,
+      controls: { flavor: "bright" },
+    });
+    expect(bright.isArranged).toBe(true);
+    expect(bright.arrangedReasons.join()).toContain("数値根拠なし");
+
+    // 既定設定の 4:6 はどちらの注記も立たない（推奨粉量範囲のアプリ既定値だけ開示される）
+    const plain = computeRecipe({ recipe: kasuya46, doseG: 20 });
+    expect(plain.isArranged).toBe(false);
+    expect(plain.supplementedNotes.join()).toContain("推奨粉量範囲");
+  });
+
+  it("アレンジモードで上書きすると変更内容が列挙される", () => {
+    const arranged = computeRecipe({
+      recipe: kasuya46,
+      doseG: 20,
+      mode: "arranged",
+      arrangement: { ratio: 16, temperatureC: 88 },
+    });
+    expect(arranged.totalWaterG).toBe(320);
+    expect(arranged.temperatureC).toBe(88);
+    expect(arranged.isArranged).toBe(true);
+    expect(arranged.arrangedReasons).toContain("比率を 1:16 に変更");
+    expect(arranged.arrangedReasons).toContain("湯温を 88℃ に変更");
+  });
+
+  it("原法モードではアレンジの上書きを無視する", () => {
+    const original = computeRecipe({
+      recipe: kasuya46,
+      doseG: 20,
+      mode: "original",
+      arrangement: { ratio: 16 },
+    });
+    expect(original.totalWaterG).toBe(300);
+    expect(original.isArranged).toBe(false);
+  });
+});
+
 describe("推定出来上がり量", () => {
   it("総湯量 - 豆量 × 吸水係数 で計算し、吸水係数は設定値", () => {
     const base = computeRecipe({ recipe: kasuya46, doseG: 20, absorptionFactor: 2 });

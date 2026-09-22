@@ -72,10 +72,12 @@ export interface ComputedRecipe {
   estimatedBeverageG: number;
   derived: DerivedValue[];
   warnings: RecipeWarning[];
-  /** 原法から何らかの変更が加わっている */
+  /** ユーザー操作によって原法から変更が加わっている */
   isArranged: boolean;
   /** 変更点の説明 */
   arrangedReasons: string[];
+  /** 調査レポートに根拠がなくアプリ側で補完した箇所（ユーザー操作とは別） */
+  supplementedNotes: string[];
 }
 
 export interface BrewSettings {
