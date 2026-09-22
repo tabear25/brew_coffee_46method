@@ -42,8 +42,11 @@ jobs:
           distribution: temurin
           java-version: '21'
 
+      # v3 は既定で旧 SDK パッケージ 'tools' を入れようとするが、Google のリポジトリから
+      # 削除済みのため sdkmanager が "Failed to find package 'tools'" で失敗する。
+      # v4 は既定の packages から 'tools' が外れている。
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
 
       - name: Install dependencies
         run: npm ci

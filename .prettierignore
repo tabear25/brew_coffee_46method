@@ -1,0 +1,18 @@
+dist
+node_modules
+android
+package-lock.json
+*.log
+data.db*
+
+# shadcn/ui の生成物と既存設定は整形対象外（差分を最小に保つ）
+client/src/components/ui
+client/src/hooks/use-toast.ts
+client/src/hooks/use-mobile.tsx
+tailwind.config.ts
+postcss.config.js
+components.json
+client/src/lib/utils.ts
+*.md
+.github
+.claude
