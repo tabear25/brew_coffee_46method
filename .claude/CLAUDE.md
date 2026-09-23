@@ -145,6 +145,9 @@ brew_cofee_46method/
 - **Service Worker は Capacitor 実行時には登録しない**（`client/src/main.tsx` で判定）。
   ネイティブはアプリ更新で資産が差し替わるため、SW のキャッシュが古い画面を固定してしまうのを避ける。
 - `android/` 配下のビルド生成物・`local.properties`・コピーされた web 資産は `android/.gitignore` で除外済み。
+- **debug 署名は `android/app/debug.keystore`（リポジトリに含めている）で固定**（`android/app/build.gradle` の
+  `signingConfigs.debug`）。CI とローカルで署名が一致し、上書きインストールできる。
+  鍵は公開されているので release の署名には使わないこと。
 - **ビルド環境の制約**: APK の実ビルドには Android SDK / Google Maven（`dl.google.com`）への到達が必要。
   ネットワーク許可リストでブロックされる環境では `gradlew` ビルドが失敗する。
 
