@@ -396,3 +396,6 @@ npm test
 - APK の実ビルドには Android SDK / Google Maven（`dl.google.com`）への到達が必要です。
   ネットワーク許可リストでブロックされる環境では `gradlew` ビルドが失敗します
 - GitHub Actions（`.github/workflows/android-apk.yml`）で debug APK をビルドし、成果物として取得できます
+- debug APK の署名は、リポジトリに含めた `android/app/debug.keystore` で固定しています。
+  GitHub Actions でもローカルでも同じ署名になるので、新しい APK を前の版に上書きインストールできます。
+  この鍵は公開されているため、release の署名には使わないでください
