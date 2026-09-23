@@ -17,20 +17,18 @@ android {
         }
     }
     // 既定の ~/.android/debug.keystore は環境ごとに生成されるため、CI では実行のたびに署名が変わり
-    // 上書きインストールできない。リポジトリに含めた鍵でデバッグ署名を固定する。
+    // 上書きインストールできない。リポジトリに含めた鍵でデバッグ署名を固定する
+    // （debug ビルドタイプは既定で signingConfigs.debug を使う）。
     // この鍵は公開されているので、release の署名には使わないこと。
     signingConfigs {
         debug {
-            storeFile file('debug.keystore')
-            storePassword 'android'
-            keyAlias 'androiddebugkey'
-            keyPassword 'android'
+            storeFile = file('debug.keystore')
+            storePassword = 'android'
+            keyAlias = 'androiddebugkey'
+            keyPassword = 'android'
         }
     }
     buildTypes {
-        debug {
-            signingConfig signingConfigs.debug
-        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
