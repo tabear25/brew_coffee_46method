@@ -99,6 +99,12 @@
 タップ領域は最低 44px、色だけで状態を表さない、フォーカスリングを消さない、
 `aria-live` はステップ変更時のみ、`prefers-reduced-motion` 対応。
 
+**システムバー（ステータスバー／ナビゲーションバー）を避ける。** Android 15 以降（targetSdk 36 で edge-to-edge 強制）と
+iOS の PWA では WebView がバーの裏まで描画される。画面端に貼り付く要素（`sticky` / `fixed`）を足すときは
+`index.css` の `--inset-top` / `--inset-bottom` / `--inset-left` / `--inset-right` で余白を取ること
+（例: ヘッダー `pt-[var(--inset-top)]`、下端のボタン `pb-[calc(var(--inset-bottom)+0.75rem)]`）。
+背景はバーの裏まで伸ばし、操作できる中身だけをバーの内側に置く。
+
 ## ディレクトリ構成（抜粋）
 
 ```
@@ -144,6 +150,9 @@ brew_cofee_46method/
   Android 側へ同期すること。`cap sync` を忘れると WebView が古い画面のままになる。
 - **Service Worker は Capacitor 実行時には登録しない**（`client/src/main.tsx` で判定）。
   ネイティブはアプリ更新で資産が差し替わるため、SW のキャッシュが古い画面を固定してしまうのを避ける。
+- **システムバー**: Capacitor 8 の SystemBars が WebView に `--safe-area-inset-*` を注入し、`index.css` の `--inset-*` が参照する。
+  バーのアイコン色は端末のダークモードではなくアプリのテーマに合わせる（`client/src/lib/system-bars.ts`）。
+  Android 14 以下ではバーが不透明なので、ネイティブのテーマ（`res/values/styles.xml`）でダークブラウンに塗り、アイコンは明るい色のまま。
 - `android/` 配下のビルド生成物・`local.properties`・コピーされた web 資産は `android/.gitignore` で除外済み。
 - **debug 署名は `android/app/debug.keystore`（リポジトリに含めている）で固定**（`android/app/build.gradle` の
   `signingConfigs.debug`）。CI とローカルで署名が一致し、上書きインストールできる。

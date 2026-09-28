@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- アプリ既定（ダークテーマ）の背景 #1f1814。client/src/index.css の --background と揃える -->
+    <color name="brew_background">#1F1814</color>
+</resources>

@@ -54,8 +54,9 @@ export default function PreviewPage() {
         <BrewStepList computed={computed} />
       </section>
 
-      {/* 下端に固定する主要アクション。下をスクロールする内容はグラデーションで抜く */}
-      <div className="sticky bottom-0 -mx-4 bg-gradient-to-t from-background via-background/95 to-transparent px-4 pb-3 pt-8">
+      {/* 下端に固定する主要アクション。下をスクロールする内容はグラデーションで抜く。
+          グラデーションはナビゲーションバーの裏まで伸ばし、ボタンはその上に置く */}
+      <div className="sticky bottom-0 -mx-4 bg-gradient-to-t from-background via-background/95 to-transparent px-4 pb-[calc(var(--inset-bottom)+0.75rem)] pt-8">
         <Button
           className="min-h-[56px] w-full text-base shadow-lg"
           onClick={() => {
