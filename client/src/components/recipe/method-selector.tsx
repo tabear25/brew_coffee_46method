@@ -116,7 +116,7 @@ export function MethodSelector({
             </button>
           </DialogTrigger>
 
-          <DialogContent className="max-h-[85vh] max-w-[600px] overflow-y-auto">
+          <DialogContent className="max-w-[600px]">
             <DialogHeader>
               <DialogTitle>抽出メソッドを選ぶ</DialogTitle>
               <DialogDescription>

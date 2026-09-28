@@ -396,6 +396,10 @@ npm test
 - APK の実ビルドには Android SDK / Google Maven（`dl.google.com`）への到達が必要です。
   ネットワーク許可リストでブロックされる環境では `gradlew` ビルドが失敗します
 - GitHub Actions（`.github/workflows/android-apk.yml`）で debug APK をビルドし、成果物として取得できます
+- Android 15 以降は画面がステータスバー／ナビゲーションバーの裏まで広がる（edge-to-edge）ため、
+  ヘッダー・下端のボタン・ダイアログはバーの幅（`client/src/index.css` の `--inset-*`）を避けて配置しています。
+  バーのアイコン色はアプリのテーマ（ダーク／ライト）に追従します（`client/src/lib/system-bars.ts`）。
+  Android 14 以下ではバーをアプリ既定の背景色（ダークブラウン）で塗ります（`android/app/src/main/res/values/styles.xml`）
 - debug APK の署名は、リポジトリに含めた `android/app/debug.keystore` で固定しています。
   GitHub Actions でもローカルでも同じ署名になるので、新しい APK を前の版に上書きインストールできます。
   この鍵は公開されているため、release の署名には使わないでください

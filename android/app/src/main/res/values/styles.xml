@@ -13,6 +13,12 @@
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:background">@null</item>
+        <!-- システムバーの裏の色。Android 14 以下はステータスバー／ナビゲーションバーがこの色で塗られる。
+             Android 15 以降（edge-to-edge）は WebView がバーの裏まで描画し、Web 側が余白を取る。
+             バーのアイコンは capacitor.config.ts の SystemBars.style（明るいアイコン）に合わせてある -->
+        <item name="android:windowBackground">@color/brew_background</item>
+        <item name="android:statusBarColor">@color/brew_background</item>
+        <item name="android:navigationBarColor">@color/brew_background</item>
     </style>
 
 

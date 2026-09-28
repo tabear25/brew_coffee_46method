@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { readJson, writeJson } from "@/lib/storage";
+import { syncSystemBarsWithTheme } from "@/lib/system-bars";
 
 type Theme = "light" | "dark";
 
@@ -25,6 +26,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     document.documentElement.style.colorScheme = theme;
     writeJson(THEME_KEY, theme);
   }, [theme]);
+
+  // Android のステータスバー／ナビゲーションバーのアイコン色もテーマに合わせる
+  useEffect(() => syncSystemBarsWithTheme(theme), [theme]);
 
   const toggleTheme = () => {
     // ダーク↔ライトの明度ジャンプを和らげる（index.css の .theme-transitioning）

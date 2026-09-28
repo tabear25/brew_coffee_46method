@@ -63,6 +63,15 @@
   --tracking-normal: 0em;
   --spacing: 0.25rem;
 
+  /* システムバー（ステータスバー／ナビゲーションバー）とカットアウトに取られる幅。
+     Android（Capacitor 8）では SystemBars が --safe-area-inset-* を WebView に注入する
+     （古い WebView は env() が正しい値を返さないため、こちらを優先する）。
+     iOS やブラウザの PWA では env() を使う */
+  --inset-top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
+  --inset-right: var(--safe-area-inset-right, env(safe-area-inset-right, 0px));
+  --inset-bottom: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
+  --inset-left: var(--safe-area-inset-left, env(safe-area-inset-left, 0px));
+
   --sidebar-primary-border: hsl(var(--sidebar-primary));
   --sidebar-accent-border: hsl(var(--sidebar-accent));
   --primary-border: hsl(var(--primary));
@@ -139,8 +148,6 @@
     @apply font-sans antialiased bg-background text-foreground;
     font-optical-sizing: auto;
     -webkit-tap-highlight-color: transparent;
-    /* iOS のホーム直下・ノッチに潜り込まないようにする */
-    padding-bottom: env(safe-area-inset-bottom);
   }
 
   /* フォーカスリングは消さない */

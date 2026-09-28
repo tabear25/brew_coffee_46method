@@ -39,7 +39,7 @@ export function RecipeSourceDialog({ computed }: { computed: ComputedRecipe }) {
           出典とレシピ詳細
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-h-[85vh] max-w-[600px] overflow-y-auto">
+      <DialogContent className="max-w-[600px]">
         <DialogHeader>
           <DialogTitle>{recipe.name}</DialogTitle>
           <DialogDescription>{recipe.description}</DialogDescription>
