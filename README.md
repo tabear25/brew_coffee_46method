@@ -46,7 +46,7 @@
 
 ### 3. 抽出タイマー画面（`#/timer`）
 
-- 経過時間（大きな数字）／ 現在のステップ ／ 今回追加する湯量 ／ 目標累計湯量 ／ 注ぎ方 ／ 次のステップまでの秒数 ／ 全体の進捗
+- 経過時間／ 現在のステップ ／ 今回追加する湯量 ／ 目標累計湯量 ／ 注ぎ方 ／ 次のステップまでの秒数 ／ 全体の進捗
 - **時刻条件のステップは自動で進行**。**状態条件のステップは自動進行せず**「約70%落ちた」「点滴状になった」「粉面付近まで水位が下がった」などの確認ボタンを表示
 - 一時停止 / 再開 / 次へ / 前へ / リセット / 抽出終了
 - 経過時間は `setInterval` の加算ではなく**開始時刻と現在時刻の差**から算出するため、タブが非アクティブになってもずれません
@@ -60,7 +60,6 @@
 - タイマーの数字はスクリーンリーダーへ通知せず、`aria-live` は**ステップ変更時のみ**
 - フォーカスリングを消さない／ダイアログは Radix のフォーカストラップ
 - `prefers-reduced-motion` / `prefers-reduced-transparency` / `prefers-contrast` に対応
-- キーボードショートカット（Space / ← → / N / P / Enter）と、その一覧を設定ダイアログに掲載
 
 ---
 
@@ -113,14 +112,6 @@ npm run dev     # 開発サーバ（http://localhost:5173）
 | `npm run build:android` | Android 向けビルド（`vite build` → `cap sync android`） |
 | `npm run open:android` | Android Studio で `android/` を開く |
 
----
-
-## テスト方法
-
-```bash
-npm test          # 全テスト（計算ロジック + レシピ検証 + UI）
-npm run check     # 型チェック
-npm run lint      # Lint
 ```
 
 `client/src/tests/` に以下を用意しています。
@@ -400,6 +391,3 @@ npm test
   ヘッダー・下端のボタン・ダイアログはバーの幅（`client/src/index.css` の `--inset-*`）を避けて配置しています。
   バーのアイコン色はアプリのテーマ（ダーク／ライト）に追従します（`client/src/lib/system-bars.ts`）。
   Android 14 以下ではバーをアプリ既定の背景色（ダークブラウン）で塗ります（`android/app/src/main/res/values/styles.xml`）
-- debug APK の署名は、リポジトリに含めた `android/app/debug.keystore` で固定しています。
-  GitHub Actions でもローカルでも同じ署名になるので、新しい APK を前の版に上書きインストールできます。
-  この鍵は公開されているため、release の署名には使わないでください
