@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { getRecipeOrDefault } from "@/data/recipes";
 import { useBrewStore } from "@/stores/brew-store";
+import { primeAudio } from "@/lib/feedback";
 
 /**
  * ページ再読み込み後、進行中の抽出があれば復元するか尋ねる。
@@ -37,6 +38,8 @@ export function RestoreSessionDialog({ onRestore }: { onRestore: () => void }) {
           </AlertDialogCancel>
           <AlertDialogAction
             onClick={() => {
+              // 再開後の最初の合図に間に合うよう、ここで音を起こして読み込んでおく
+              primeAudio();
               restoreSession();
               onRestore();
             }}
