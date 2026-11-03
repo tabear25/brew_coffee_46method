@@ -118,6 +118,7 @@ brew_cofee_46method/
 │   ├── index.html
 │   ├── public/icons/         # PWA アイコン（ルートの 1784369901054.png から生成）
 │   └── src/
+│       ├── assets/sounds/    # ステップ切り替え音（team-radio.wav。lib/feedback.ts が鳴らす）
 │       ├── domain/           # 計算・検証・タイムライン（UI 非依存）
 │       ├── data/recipes/     # レシピ（1 ファイル 1 レシピ）+ index.ts
 │       ├── stores/           # brew-store.tsx（Context + useReducer）
