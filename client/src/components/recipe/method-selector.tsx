@@ -120,7 +120,8 @@ export function MethodSelector({
             <DialogHeader>
               <DialogTitle>抽出メソッドを選ぶ</DialogTitle>
               <DialogDescription>
-                調査レポート収録の 10 レシピと、Brew Mate 独自の 3 メソッドから選べます。
+                {groups.map((g) => `${g.label}（${g.recipes.length} 件）`).join("、")}
+                から選べます。
               </DialogDescription>
             </DialogHeader>
 

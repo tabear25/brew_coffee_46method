@@ -80,6 +80,25 @@ describe("レシピ設定画面", () => {
     expect(screen.getByTestId("step-cumulative-pour-5")).toHaveTextContent("累計 375g");
   });
 
+  it("1 投 30g 固定のレシピは、豆量を増やすと 1 投の量ではなく投数が増える", async () => {
+    const user = setup();
+    await user.click(screen.getByTestId("open-method-selector"));
+    await user.click(await screen.findByTestId("recipe-option-nagasaki_jbrc2026_v1"));
+
+    // 基準 17.5g / 210g / 1:12
+    expect(screen.getByTestId("dose-display")).toHaveTextContent("17.5");
+    expect(screen.getByTestId("summary-total-water")).toHaveTextContent("210");
+    expect(screen.getByTestId("summary-ratio")).toHaveTextContent("1:12.0");
+
+    // 20g → 240g → 30g × 8 投（8 投目は 2:20）
+    setDose("20");
+    expect(screen.getByTestId("summary-total-water")).toHaveTextContent("240");
+    await user.click(screen.getByTestId("start-brew"));
+    expect(await screen.findByTestId("step-delta-pour-8")).toHaveTextContent("+30");
+    expect(screen.getByTestId("step-cumulative-pour-8")).toHaveTextContent("累計 240g");
+    expect(screen.getByTestId("step-time-pour-8")).toHaveTextContent("2:20");
+  });
+
   it("推奨粉量範囲を外れるとエラーではなく警告が出る", async () => {
     const user = setup();
     await user.click(screen.getByTestId("open-method-selector"));

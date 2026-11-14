@@ -15,6 +15,7 @@ import {
   kasuya46,
   lanceHedrick121,
   mattWintonFivePour,
+  nagasakiJbrc2026,
   scottRaoV60,
 } from "@/data/recipes";
 
@@ -216,6 +217,108 @@ describe("出典の開示", () => {
     });
     expect(original.totalWaterG).toBe(300);
     expect(original.isArranged).toBe(false);
+  });
+});
+
+describe("1 投固定量型（長崎愛美 JBrC 2026）", () => {
+  const recipe = nagasakiJbrc2026;
+  const poursOf = (computed: ReturnType<typeof computeRecipe>) =>
+    computed.steps.filter((s) => s.step.type === "pour");
+
+  it("基準 17.5g では 210g（1:12）を 30g × 7 投、20 秒間隔で注ぐ", () => {
+    const computed = computeRecipe({ recipe, doseG: 17.5 });
+    const pours = poursOf(computed);
+    expect(computed.totalWaterG).toBe(210);
+    expect(computed.ratio).toBe(12);
+    expect(pourDeltas(computed)).toEqual([30, 30, 30, 30, 30, 30, 30]);
+    expect(pours.map((s) => s.cumulativeWaterG)).toEqual([30, 60, 90, 120, 150, 180, 210]);
+    expect(pours.map((s) => s.startSec)).toEqual([0, 20, 40, 60, 80, 100, 120]);
+    // 4 投目（1:00）まで 90℃、5 投目（1:20）から 75℃
+    expect(pours.map((s) => s.temperatureC)).toEqual([90, 90, 90, 90, 75, 75, 75]);
+    // 出典どおりなので、ステップに補完の印は付かない
+    expect(computed.steps.some((s) => s.step.adaptation)).toBe(false);
+    expect(computed.isArranged).toBe(false);
+  });
+
+  it("豆量を変えても 1 投 30g と 20 秒間隔は変わらず、投数が変わる", () => {
+    const large = computeRecipe({ recipe, doseG: 20 });
+    expect(large.totalWaterG).toBe(240);
+    expect(pourDeltas(large)).toEqual([30, 30, 30, 30, 30, 30, 30, 30]);
+    expect(poursOf(large).map((s) => s.startSec)).toEqual([0, 20, 40, 60, 80, 100, 120, 140]);
+
+    const small = computeRecipe({ recipe, doseG: 15 });
+    expect(small.totalWaterG).toBe(180);
+    expect(pourDeltas(small)).toEqual([30, 30, 30, 30, 30, 30]);
+    expect(poursOf(small).map((s) => s.startSec)).toEqual([0, 20, 40, 60, 80, 100]);
+  });
+
+  it("30g で割り切れない湯量は最後の 1 投で総湯量に合わせる", () => {
+    // 18g → 216g → 7 投 / 16.5g → 198g → 7 投 / 19g → 228g → 8 投
+    expect(pourDeltas(computeRecipe({ recipe, doseG: 18 }))).toEqual([30, 30, 30, 30, 30, 30, 36]);
+    expect(pourDeltas(computeRecipe({ recipe, doseG: 16.5 }))).toEqual([
+      30, 30, 30, 30, 30, 30, 18,
+    ]);
+    expect(pourDeltas(computeRecipe({ recipe, doseG: 19 }))).toEqual([
+      30, 30, 30, 30, 30, 30, 30, 18,
+    ]);
+
+    // 0.1g 刻みのどの豆量でも: 最後以外は 30g、最後は 15g 以上 45g 未満、合計は総湯量
+    for (let tenths = 10; tenths <= 400; tenths++) {
+      const doseG = tenths / 10;
+      const computed = computeRecipe({ recipe, doseG });
+      const deltas = pourDeltas(computed);
+      const last = deltas[deltas.length - 1];
+      expect(
+        deltas.reduce((a, b) => a + b, 0),
+        `${doseG}g`,
+      ).toBe(computed.totalWaterG);
+      expect(
+        deltas.slice(0, -1).every((d) => d === 30),
+        `${doseG}g`,
+      ).toBe(true);
+      if (deltas.length > 1) {
+        expect(last, `${doseG}g`).toBeGreaterThanOrEqual(15);
+        expect(last, `${doseG}g`).toBeLessThan(45);
+      }
+    }
+  });
+
+  it("75℃ に切り替える位置は投数比 4:3 に近づけ、7 投以外では補完値として開示する", () => {
+    // 8 投 → 90℃ 5 投・75℃ 3 投
+    const large = computeRecipe({ recipe, doseG: 20 });
+    expect(poursOf(large).map((s) => s.temperatureC)).toEqual([90, 90, 90, 90, 90, 75, 75, 75]);
+    const adapted = large.steps.filter((s) => s.step.adaptation);
+    expect(adapted.map((s) => s.step.id)).toEqual(["pour-6"]);
+    expect(adapted[0].step.title).toContain("75℃に切替");
+    expect(large.supplementedNotes.join()).toContain("投数比 4 : 3");
+    // データ側の補完であって、ユーザーによる変更ではない
+    expect(large.isArranged).toBe(false);
+
+    // 6 投 → 90℃ 3 投・75℃ 3 投
+    const small = computeRecipe({ recipe, doseG: 15 });
+    expect(poursOf(small).map((s) => s.temperatureC)).toEqual([90, 90, 90, 75, 75, 75]);
+  });
+
+  it("抽出時間の目安は投数に合わせて延び縮みし、アプリ既定値として開示する", () => {
+    const base = computeRecipe({ recipe, doseG: 17.5 });
+    // 最終投 2:00 ＋ 落ちきり 30 秒（アプリ既定値）
+    expect(base.estimatedFinishSec).toBe(150);
+    expect(base.supplementedNotes).toContain("抽出時間の目安（基準 2:30）はアプリ既定値");
+    expect(computeRecipe({ recipe, doseG: 20 }).estimatedFinishSec).toBe(170);
+    expect(computeRecipe({ recipe, doseG: 15 }).estimatedFinishSec).toBe(130);
+  });
+
+  it("アレンジで比率を変えても 1 投 30g のまま、投数で総湯量に合わせる", () => {
+    // 17.5g × 1:15 = 262.5 → 263g → 9 投（最後 23g）
+    const arranged = computeRecipe({
+      recipe,
+      doseG: 17.5,
+      mode: "arranged",
+      arrangement: { ratio: 15 },
+    });
+    expect(arranged.totalWaterG).toBe(263);
+    expect(pourDeltas(arranged)).toEqual([30, 30, 30, 30, 30, 30, 30, 30, 23]);
+    expect(arranged.arrangedReasons).toContain("比率を 1:15 に変更");
   });
 });
 

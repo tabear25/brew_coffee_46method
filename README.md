@@ -31,7 +31,7 @@
 
 ### 1. レシピ設定画面（`#/`）
 
-- **抽出メソッドの選択** — 13 レシピをダイアログから選択。お気に入り登録も可能
+- **抽出メソッドの選択** — 14 レシピをダイアログから選択。お気に入り登録も可能
 - **豆量の指定** — スライダー（0.5g 刻み）と数値入力（0.1g 刻み）の両方
 - **味の方向性 / 濃さ** — レシピが宣言したコントロールだけが表示される（共通の味調整を全レシピへ強制しない）
 - **原法モード / アレンジモード** — アレンジモードでは比率・湯温・挽き目を上書きでき、変更時は「原法から変更されています」と明示
@@ -80,6 +80,15 @@
 | 9 | KONO 名門 点滴法 | 24g / 240g / 1:10 | 82℃ | 時刻＋状態 |
 | 10 | Blue Bottle Chemex | 50g / 700g / 1:14 | 97℃ | 時刻＋状態 |
 
+### その他の公開レシピ（1 件・調査レポート外）
+
+| レシピ | 基準 | 湯温 | 進行 | 内容 |
+| --- | --- | --- | --- | --- |
+| 長崎愛美 JBrC 2026 優勝レシピ | 17.5g / 210g / 1:12 | 90→75℃ | 時刻 | 30g ずつ 20 秒間隔。1 投 30g は豆量によらず固定で、豆量に応じて投数が変わる（15g → 6 投 / 20g → 8 投） |
+
+出典は大会の抽出を要約した YouTube ショートの解説画像と、ユーザー提供情報（挽き目・リンス・1 投 30g の固定）。
+推奨粉量範囲・目標終了・7 投以外での 75℃ への切替位置はアプリ既定値として開示しています。
+
 ### Brew Mate 独自メソッド（3 件・調査レポート外）
 
 | レシピ | 内容 |
@@ -120,7 +129,7 @@ npm run dev     # 開発サーバ（http://localhost:5173）
 | --- | --- |
 | `recipe-calculator.test.ts` | 総湯量・累計/追加湯量・丸め・流量からの注湯時間・警告・状態条件の非自動進行 |
 | `brew-clock.test.ts` | 一時停止時間の除外、tick 取りこぼし耐性 |
-| `recipe-data.test.ts` | 全レシピのバリデーション（ID 重複・version・ステップ順・累計割合の単調増加・100% 到達・負の湯量・時刻の逆行・推奨範囲・source metadata） |
+| `recipe-data.test.ts` | 全レシピのバリデーション（ID 重複・version・ステップ順・累計割合の単調増加・100% 到達・負の湯量・時刻の逆行・推奨範囲・source metadata。`buildSteps` を持つレシピは推奨粉量範囲の両端でも検証） |
 | `legacy-parity.test.ts` | 旧 `brew-calculator.ts` から移植した 3 メソッドの数値パリティ |
 | `ui.test.tsx` | レシピ切替・豆量変更・警告・アレンジ・プレビュー・タイマー（開始/一時停止/再開/リセット/自動進行/状態確認/復元） |
 
@@ -226,6 +235,14 @@ deltaWater[i]       = cumulativeTarget[i] - cumulativeTarget[i - 1]
 最後の注湯ステップの累計は必ず総湯量と一致させます。
 ブルームが豆量倍率で決まるレシピ（Rao / 1-2-1）は `bloomWaterG = roundTo(doseG * 3, roundingG)`。
 
+1 投の湯量が固定のレシピ（長崎 JBrC 2026 の 30g）は、総湯量は比率で出したうえで**投数を総湯量から決めます**。
+1 投の量は豆量で変えません。
+
+```ts
+pourCount = max(1, round(totalWaterG / 30))   // 累計は 30g, 60g, … の絶対量（fixed_reference_g）
+// 30g で割り切れない分は最後の 1 投で合わせる（最後の 1 投は 15g 以上 45g 未満）
+```
+
 ### 注湯時間
 
 ```ts
@@ -264,7 +281,7 @@ export const yourRecipe: Recipe = {
   author: "作者名",             // 任意
   description: "1〜2 行の説明。",
   sourceType: "original",      // original | official_partner | adaptation
-  group: "researched",         // researched（調査レポート収録）| app（独自）
+  group: "researched",         // researched（調査レポート収録）| external（その他の公開レシピ）| app（独自）
   brewer: { family: "cone", models: ["Hario V60 02"], filter: "paper" },
 
   reference: {
@@ -330,9 +347,14 @@ npm test
 
 ### 投数や配分が可変のレシピ
 
-コントロールで投数・配分が変わるレシピは `flavorControls` を宣言し、`buildSteps(controls)` を実装します
-（`kasuya-46.ts` が実例）。**湯量は割合で表すため `buildSteps` は豆量に依存しない純粋関数**です。
-`steps` には既定コントロールでの `buildSteps` 出力をそのまま入れてください（検証で一致を確認します）。
+コントロールで投数・配分が変わるレシピは `flavorControls` を宣言し、`buildSteps(controls, context)` を実装します
+（`kasuya-46.ts` が実例）。**湯量を割合で表すレシピは `context` を使わず、`buildSteps` は豆量に依存しない純粋関数**にします。
+`steps` には既定コントロール・基準豆量での `buildSteps` 出力をそのまま入れてください（検証で一致を確認します）。
+
+1 投の湯量が固定で投数が総湯量で決まるレシピ（`nagasaki-jbrc-2026.ts` が実例）だけは、
+`context.totalWaterG`（丸め済みの総湯量。アレンジの比率も反映済み）から投数を決めます。
+累計は `fixed_reference_g` で絶対量にし、最後の 1 投を `cumulative_fraction: 1` にして端数を吸収します。
+豆量で投数が変わるため、`buildSteps` を持つレシピは**基準豆量に加えて推奨粉量範囲の両端でも検証**します。
 
 ミルク量・氷量などの派生値は `derive(ctx)` で返します（`cafe-latte.ts` / `flash-brew.ts` が実例）。
 
@@ -356,13 +378,15 @@ npm test
 ## データの扱いと出典
 
 数値は調査レポート「ハンドドリップ抽出レシピ10選と自動計算用データ設計」を Source of Truth として
-データ化しています。推測で数値を足していないことを保証するため、出典にない値には必ず印を付けています。
+データ化しています（「その他の公開レシピ」は各レシピの `metadata` に記載した出典）。
+推測で数値を足していないことを保証するため、出典にない値には必ず印を付けています。
 
 | 印 | 意味 | 表示 |
 | --- | --- | --- |
 | `RecipeStep.adaptation` + `adaptationNote` | 注湯開始時刻などを一般に流通するタイムラインで補完 | ステップカードに「補完値」バッジ／出典ダイアログに理由 |
 | `reference.doseRangeIsAppDefault` | 推奨粉量範囲が出典になくアプリ既定値 | 警告文と出典ダイアログに明記 |
 | `reference.temperatureIsAppDefault` / `grind.isAppDefault` | 湯温・挽き目が出典になくアプリ既定値 | 出典ダイアログに明記 |
+| `reference.targetFinishIsAppDefault` | 目標終了（抽出時間の目安）が出典になくアプリ既定値 | 出典ダイアログと補完の注記に明記 |
 | `RecipeControlOption.adaptation` | 選択肢に数値根拠がない | 「派生」バッジ／選ぶと「原法から変更されています」 |
 
 同じ作者・同じメソッド名でも複数版があるため、**author だけをキーにせず、一意な `id` と `version`** を

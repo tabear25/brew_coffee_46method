@@ -19,6 +19,12 @@ import {
   type RecipeWarning,
 } from "./brew.types";
 
+/** 注記用の m:ss 表記（ドメイン層は UI の format に依存しない） */
+function formatMinSec(seconds: number): string {
+  const safe = Math.max(0, Math.round(seconds));
+  return `${Math.floor(safe / 60)}:${(safe % 60).toString().padStart(2, "0")}`;
+}
+
 /** 丸め。step = 1 なら 1g 単位、0.5 なら 0.5g 単位 */
 export function roundTo(value: number, step: number): number {
   if (!Number.isFinite(value)) return 0;
@@ -146,7 +152,8 @@ function computeCore(
   totalWaterG: number,
   baseTemperatureC: number,
 ): CoreResult {
-  const resolved = resolveSteps(recipe, controls);
+  // 1 投固定量型のレシピは総湯量で投数が変わるため、実際の豆量・総湯量でステップを組む
+  const resolved = resolveSteps(recipe, controls, { doseG, totalWaterG });
   const cumulative = computeCumulativeTargets(
     resolved,
     totalWaterG,
@@ -327,6 +334,11 @@ export function computeRecipe(input: ComputeRecipeInput): ComputedRecipe {
   }
   if (recipe.reference.grind.isAppDefault) {
     supplementedNotes.push(`挽き目「${recipe.reference.grind.label}」はアプリ既定値`);
+  }
+  if (recipe.reference.targetFinishIsAppDefault) {
+    supplementedNotes.push(
+      `抽出時間の目安（基準 ${formatMinSec(recipe.reference.targetFinishSec)}）はアプリ既定値`,
+    );
   }
 
   return {

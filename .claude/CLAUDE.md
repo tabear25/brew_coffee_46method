@@ -11,7 +11,7 @@
 単なるレシピ電卓ではなく、**時刻条件**（0:45 に次を注ぐ）と**状態条件**（約70%落ちたら次を注ぐ）を
 分けて扱う「抽出シーケンサー」であることが設計の核。
 
-- 収録レシピは 13 件（調査レポート収録 10 件 ＋ Brew Mate 独自 3 件）。
+- 収録レシピは 14 件（調査レポート収録 10 件 ＋ その他の公開レシピ 1 件 ＋ Brew Mate 独自 3 件）。
 - ディレクトリ名は歴史的経緯で `brew_cofee_46method`（`coffee` ではなく `cofee`）。
 
 ## 技術スタック
@@ -61,14 +61,18 @@
 - **総湯量**: 比率型 `roundTo(doseG * ratio, roundingG)` ／ 固定湯量型 `reference.waterG`（豆量を変えても不変）
 - **ステップ湯量**: 追加量を個別に丸めず、**累計目標を丸めてから差分を取る**。最終累計は必ず総湯量と一致
 - **ブルーム**: 豆量倍率型は `roundTo(doseG * 3, roundingG)`（Rao / 1-2-1）
+- **1 投固定量型**: 1 投の湯量が固定のレシピ（長崎 JBrC 2026 の 30g）は、総湯量を比率で出したうえで
+  投数を `max(1, round(総湯量 / 30))` とし、端数は最後の 1 投で合わせる（1 投の量は豆量で変えない）
 - **注湯時間**: `deltaWaterG / flowRateGps`。**時刻を豆量に比例させない**（ブルーム待ち・開始時刻・投間隔は固定値）
 - **推定出来上がり量**: `totalWaterG - doseG * absorptionFactor`（初期値 2.0）。必ず「推定」と明記し正式湯量と混同しない
 
 ### データ（`client/src/data/recipes/`）
 
 1 レシピ 1 ファイル。`index.ts` の `RECIPES` に登録する。
-投数・配分が可変のレシピは `buildSteps(controls)`（豆量に依存しない純粋関数）を実装し、
-`steps` には既定コントロールでの出力をそのまま入れる（検証で一致を確認している）。
+投数・配分が可変のレシピは `buildSteps(controls, context)`（純粋関数）を実装し、
+`steps` には既定コントロール・基準豆量での出力をそのまま入れる（検証で一致を確認している）。
+湯量を割合で表すレシピは `context` を使わない（豆量に依存しない）。1 投の湯量が固定で投数が総湯量で
+決まるレシピだけが `context.totalWaterG` を使う。`buildSteps` を持つレシピは推奨粉量範囲の両端でも検証する。
 ミルク量・氷量などの派生値は `derive(ctx)` で返す。
 
 **推測で数値を足さないこと。** 出典にない値には必ず印を付ける。
@@ -78,6 +82,7 @@
 | `RecipeStep.adaptation` + `adaptationNote` | 注湯開始時刻などを一般に流通するタイムラインで補完した |
 | `reference.doseRangeIsAppDefault` | 推奨粉量範囲がアプリ既定値 |
 | `reference.temperatureIsAppDefault` / `grind.isAppDefault` | 湯温・挽き目がアプリ既定値 |
+| `reference.targetFinishIsAppDefault` | 目標終了（抽出時間の目安）がアプリ既定値 |
 | `RecipeControlOption.adaptation` | その選択肢に数値根拠がない |
 
 同じ作者・同じメソッド名でも複数版があるため、**author だけをキーにせず一意な `id` と `version`** を持たせる。

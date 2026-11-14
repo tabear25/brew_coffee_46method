@@ -78,6 +78,7 @@ export function RecipeSourceDialog({ computed }: { computed: ComputedRecipe }) {
               {reference.targetFinishRangeSec
                 ? `${formatTime(reference.targetFinishRangeSec[0])}〜${formatTime(reference.targetFinishRangeSec[1])}`
                 : formatTime(reference.targetFinishSec)}
+              {reference.targetFinishIsAppDefault && "（アプリ既定値）"}
             </dd>
             {reference.doseRangeG && (
               <>

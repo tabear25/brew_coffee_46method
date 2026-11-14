@@ -5,6 +5,7 @@ import {
   type ControlValues,
   type Recipe,
   type RecipeStep,
+  type StepBuildContext,
 } from "./recipe.types";
 import { computeCumulativeTargets, computeTotalWater } from "./recipe-calculator";
 import { buildTimeline } from "./timeline-builder";
@@ -32,10 +33,16 @@ export function controlCombinations(recipe: Recipe): ControlValues[] {
   return combos;
 }
 
+/** buildSteps の検証に使う豆量（基準豆量と推奨粉量範囲の両端） */
+function validationDoses(recipe: Recipe): number[] {
+  return Array.from(new Set([recipe.reference.doseG, ...(recipe.reference.doseRangeG ?? [])]));
+}
+
+/** steps は context の豆量・総湯量で組んだものとして検証する */
 function validateStepList(
   recipe: Recipe,
   steps: RecipeStep[],
-  variant: string | undefined,
+  context: StepBuildContext,
   push: (code: string, message: string) => void,
 ): void {
   if (steps.length === 0) {
@@ -92,13 +99,8 @@ function validateStepList(
   }
 
   // 実際の湯量計算で、負の追加量が出ないこと・最終累計が総湯量に一致すること
-  const totalWaterG = computeTotalWater(recipe, recipe.reference.doseG, {});
-  const cumulative = computeCumulativeTargets(
-    steps,
-    totalWaterG,
-    recipe.reference.doseG,
-    recipe.scaling.roundingG,
-  );
+  const { doseG, totalWaterG } = context;
+  const cumulative = computeCumulativeTargets(steps, totalWaterG, doseG, recipe.scaling.roundingG);
   for (let i = 0; i < cumulative.length; i++) {
     const delta = cumulative[i] - (i === 0 ? 0 : cumulative[i - 1]);
     if (delta < -1e-9) {
@@ -169,7 +171,6 @@ function validateStepList(
       "requiresStateConfirmation が true ですが状態条件のステップがありません",
     );
   }
-  void variant;
 }
 
 /** 1 レシピを検証する。問題がなければ空配列 */
@@ -234,20 +235,37 @@ export function validateRecipe(recipe: Recipe): ValidationIssue[] {
     }
   }
 
+  // 湯量の検証には、豆量とコントロールから実際に算出される総湯量を使う
+  const contextAt = (doseG: number, controls: ControlValues): StepBuildContext => ({
+    doseG,
+    totalWaterG: computeTotalWater(recipe, doseG, controls),
+  });
+  const defaults = defaultControlValues(recipe);
+  const referenceContext = contextAt(reference.doseG, defaults);
+
   // 静的な steps と、コントロールの全組み合わせで生成したステップの両方を検証する
-  validateStepList(recipe, recipe.steps, undefined, (code, message) => add(code, message));
+  validateStepList(recipe, recipe.steps, referenceContext, (code, message) => add(code, message));
 
   if (recipe.buildSteps) {
-    const defaults = defaultControlValues(recipe);
-    const built = recipe.buildSteps(defaults);
+    const built = recipe.buildSteps(defaults, referenceContext);
     if (JSON.stringify(built) !== JSON.stringify(recipe.steps)) {
-      add("steps_default_mismatch", "既定コントロールでの buildSteps 出力が steps と一致しません");
-    }
-    for (const combo of controlCombinations(recipe)) {
-      const variant = JSON.stringify(combo);
-      validateStepList(recipe, resolveSteps(recipe, combo), variant, (code, message) =>
-        add(code, message, variant),
+      add(
+        "steps_default_mismatch",
+        "既定コントロール・基準豆量での buildSteps 出力が steps と一致しません",
       );
+    }
+    // 1 投固定量型は総湯量で投数が変わるため、基準豆量だけでなく推奨粉量範囲の両端でも検証する
+    for (const combo of controlCombinations(recipe)) {
+      for (const doseG of validationDoses(recipe)) {
+        const context = contextAt(doseG, combo);
+        const variant =
+          doseG === reference.doseG
+            ? JSON.stringify(combo)
+            : `${JSON.stringify(combo)} @ ${doseG}g`;
+        validateStepList(recipe, resolveSteps(recipe, combo, context), context, (code, message) =>
+          add(code, message, variant),
+        );
+      }
     }
   }
 
