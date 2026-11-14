@@ -63,6 +63,7 @@ function RecipeRow({
                 基準 {recipe.reference.doseG}g / {recipe.reference.waterG}g ・{" "}
                 {recipe.reference.temperatureC}℃ ・ 目安{" "}
                 {formatTime(recipe.reference.targetFinishSec)}
+                {recipe.reference.targetFinishIsAppDefault && "（アプリ既定値）"}
               </span>
             </span>
           </span>

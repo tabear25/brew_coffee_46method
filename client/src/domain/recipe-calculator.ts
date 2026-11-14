@@ -319,10 +319,14 @@ export function computeRecipe(input: ComputeRecipeInput): ComputedRecipe {
 
   // データ側の補完は「ユーザーによる変更」とは区別して開示する
   const supplementedNotes: string[] = [];
+  // 同じ理由の補完が複数の投に続く場合（例: 8 投目以降の湯温）は、最初の投で 1 回だけ開示する
+  const seenAdaptationNotes = new Set<string>();
   for (const step of core.resolved) {
-    if (step.adaptation) {
-      supplementedNotes.push(`${step.title}: ${step.adaptationNote ?? "調査レポート外の補完値"}`);
-    }
+    if (!step.adaptation) continue;
+    const note = step.adaptationNote ?? "調査レポート外の補完値";
+    if (seenAdaptationNotes.has(note)) continue;
+    seenAdaptationNotes.add(note);
+    supplementedNotes.push(`${step.title}: ${note}`);
   }
   if (recipe.reference.doseRangeIsAppDefault && recipe.reference.doseRangeG) {
     supplementedNotes.push(

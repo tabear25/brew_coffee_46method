@@ -16,6 +16,8 @@ export interface BrewStepCardProps {
   /** すでに終わったステップ */
   done?: boolean;
   compact?: boolean;
+  /** 目安時刻がアプリ既定値（目標終了）から出ている */
+  estimateIsAppDefault?: boolean;
 }
 
 function Field({ label, value }: { label: string; value: React.ReactNode }) {
@@ -27,7 +29,13 @@ function Field({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
-export function BrewStepCard({ computed, active, done, compact }: BrewStepCardProps) {
+export function BrewStepCard({
+  computed,
+  active,
+  done,
+  compact,
+  estimateIsAppDefault,
+}: BrewStepCardProps) {
   const { step } = computed;
   const isPour = step.type === "pour";
   const flowLabel = flowStrengthLabel(step.flowRateGps);
@@ -110,6 +118,14 @@ export function BrewStepCard({ computed, active, done, compact }: BrewStepCardPr
           >
             {timeLabel}
           </span>
+          {estimateIsAppDefault && (
+            <span
+              className="block text-[10px] text-muted-foreground"
+              data-testid={`step-time-note-${step.id}`}
+            >
+              アプリ既定値
+            </span>
+          )}
         </span>
       </header>
 

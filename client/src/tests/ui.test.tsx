@@ -90,6 +90,11 @@ describe("レシピ設定画面", () => {
     expect(screen.getByTestId("summary-total-water")).toHaveTextContent("210");
     expect(screen.getByTestId("summary-ratio")).toHaveTextContent("1:12.0");
 
+    // スライダーの範囲は推奨粉量範囲 15〜20g から決まる 10〜30g
+    const doseSlider = within(screen.getByTestId("slider-dose")).getByRole("slider");
+    expect(doseSlider).toHaveAttribute("aria-valuemin", "10");
+    expect(doseSlider).toHaveAttribute("aria-valuemax", "30");
+
     // 20g → 240g → 30g × 8 投（8 投目は 2:20）
     setDose("20");
     expect(screen.getByTestId("summary-total-water")).toHaveTextContent("240");
@@ -275,5 +280,54 @@ describe("抽出タイマー画面", () => {
     await user2.click(screen.getByTestId("restore-confirm"));
     expect(screen.getByTestId("elapsed-time")).toHaveTextContent("0:10");
     expect(screen.getByTestId("paused-badge")).toBeInTheDocument();
+  });
+});
+
+describe("総抽出時間がアプリ既定値のレシピ", () => {
+  it("総抽出時間を出す 7 か所すべてに「アプリ既定値」の印が出る", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: false });
+    const user = setup({ fakeTimers: true });
+
+    // 既定値ではないレシピ（既定の 4:6）には印が付かない
+    expect(screen.queryByTestId("summary-finish-note")).not.toBeInTheDocument();
+
+    // 1. レシピ一覧の「目安」
+    await user.click(screen.getByTestId("open-method-selector"));
+    expect(screen.getByTestId("recipe-option-nagasaki_jbrc2026_v1")).toHaveTextContent(
+      "目安 2:30（アプリ既定値）",
+    );
+    expect(screen.getByTestId("recipe-option-kasuya_46_v1")).not.toHaveTextContent("アプリ既定値");
+    await user.click(screen.getByTestId("recipe-option-nagasaki_jbrc2026_v1"));
+
+    // 2. 設定画面の「抽出時間の目安」
+    expect(screen.getByTestId("summary-finish")).toHaveTextContent("2:30");
+    expect(screen.getByTestId("summary-finish-note")).toHaveTextContent("アプリ既定値");
+
+    // 3. 出典ダイアログの「目標終了」
+    await user.click(screen.getByTestId("open-source-dialog"));
+    expect(screen.getByText("2:30（アプリ既定値）")).toBeInTheDocument();
+    await user.keyboard("{Escape}");
+
+    // 4. プレビューの見出し / 5. 終了ステップの目安
+    await user.click(screen.getByTestId("start-brew"));
+    expect(screen.getByTestId("preview-meta")).toHaveTextContent(
+      "抽出終了予定 2:30（アプリ既定値）",
+    );
+    expect(screen.getByTestId("step-time-finish")).toHaveTextContent("目安 2:30");
+    expect(screen.getByTestId("step-time-note-finish")).toHaveTextContent("アプリ既定値");
+
+    // 6. タイマー画面の進捗表示
+    await user.click(screen.getByTestId("start-timer"));
+    expect(screen.getByTestId("progress-finish")).toHaveTextContent(
+      "抽出終了予定 2:30（アプリ既定値）",
+    );
+
+    // 7. 最終投（2:00）のあと、「湯が落ちきった」の確認待ちで出る目安
+    await act(async () => {
+      vi.advanceTimersByTime(121_000);
+    });
+    expect(screen.getByTestId("manual-condition-prompt")).toHaveTextContent(
+      "目安は 2:30 前後です（アプリ既定値）",
+    );
   });
 });

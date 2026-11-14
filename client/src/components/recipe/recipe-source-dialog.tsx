@@ -17,7 +17,13 @@ import type { ComputedRecipe } from "@/domain/brew.types";
 export function RecipeSourceDialog({ computed }: { computed: ComputedRecipe }) {
   const { recipe } = computed;
   const { reference, metadata } = recipe;
-  const adaptedSteps = computed.steps.filter((s) => s.step.adaptation);
+  // 同じ理由の補完が続く投（例: 8 投目以降の湯温）は、最初の投だけ載せる
+  const adaptedSteps = computed.steps.filter(
+    (s, i, all) =>
+      s.step.adaptation &&
+      all.findIndex((t) => t.step.adaptation && t.step.adaptationNote === s.step.adaptationNote) ===
+        i,
+  );
   const flowRates = Array.from(
     new Set(
       computed.steps

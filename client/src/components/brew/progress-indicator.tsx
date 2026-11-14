@@ -7,6 +7,8 @@ export interface ProgressIndicatorProps {
   totalSteps: number;
   elapsedSec: number;
   estimatedFinishSec: number;
+  /** 抽出終了予定がアプリ既定値（目標終了）から出ている */
+  finishIsAppDefault?: boolean;
 }
 
 export function ProgressIndicator({
@@ -15,6 +17,7 @@ export function ProgressIndicator({
   totalSteps,
   elapsedSec,
   estimatedFinishSec,
+  finishIsAppDefault,
 }: ProgressIndicatorProps) {
   const percent = Math.round(Math.min(1, Math.max(0, ratio)) * 100);
 
@@ -39,7 +42,10 @@ export function ProgressIndicator({
         <span>
           ステップ {currentStepNumber} / {totalSteps}
         </span>
-        <span>抽出終了予定 {formatTime(estimatedFinishSec)}</span>
+        <span data-testid="progress-finish">
+          抽出終了予定 {formatTime(estimatedFinishSec)}
+          {finishIsAppDefault && "（アプリ既定値）"}
+        </span>
       </div>
       <span className="sr-only">経過 {formatTimeSpoken(elapsedSec)}</span>
     </div>

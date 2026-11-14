@@ -106,6 +106,7 @@ export default function TimerPage() {
         totalSteps={computed.steps.length}
         elapsedSec={timer.elapsedSec}
         estimatedFinishSec={computed.estimatedFinishSec}
+        finishIsAppDefault={computed.recipe.reference.targetFinishIsAppDefault}
       />
 
       <BrewTimer
@@ -123,6 +124,10 @@ export default function TimerPage() {
           nextStep={timer.nextStep}
           label={timer.confirmLabel}
           onConfirm={timer.confirmNext}
+          estimateIsAppDefault={
+            timer.nextStep.step.type === "finish" &&
+            computed.recipe.reference.targetFinishIsAppDefault
+          }
         />
       )}
 

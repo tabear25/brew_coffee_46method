@@ -7,12 +7,19 @@ export interface ManualConditionPromptProps {
   nextStep: ComputedStep;
   label: string;
   onConfirm: () => void;
+  /** 目安時刻がアプリ既定値（目標終了）から出ている */
+  estimateIsAppDefault?: boolean;
 }
 
 /**
  * 排水状態や水位が条件のステップは自動で進めず、ユーザーの確認を待つ。
  */
-export function ManualConditionPrompt({ nextStep, label, onConfirm }: ManualConditionPromptProps) {
+export function ManualConditionPrompt({
+  nextStep,
+  label,
+  onConfirm,
+  estimateIsAppDefault,
+}: ManualConditionPromptProps) {
   return (
     <section
       className="rounded-xl border border-primary bg-primary/10 p-4"
@@ -31,7 +38,8 @@ export function ManualConditionPrompt({ nextStep, label, onConfirm }: ManualCond
             g）
           </>
         )}
-        。目安は {formatTime(nextStep.estimatedStartSec)} 前後です。
+        。目安は {formatTime(nextStep.estimatedStartSec)} 前後です
+        {estimateIsAppDefault && "（アプリ既定値）"}。
       </p>
       <Button
         className="mt-3 min-h-[52px] w-full text-base"

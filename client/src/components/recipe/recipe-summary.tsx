@@ -8,25 +8,37 @@ function Metric({
   label,
   value,
   unit,
+  note,
   testId,
   emphasis,
 }: {
   label: string;
   value: string;
   unit?: string;
+  /** 値の下に出す小さな注記（例: アプリ既定値） */
+  note?: string;
   testId?: string;
   emphasis?: boolean;
 }) {
   return (
     <div className={`rounded-lg px-3 py-2.5 ${emphasis ? "bg-primary/10" : "bg-muted/40"}`}>
       <div className="text-[11px] leading-tight text-muted-foreground">{label}</div>
+      {/* 挽き目のような日本語の値を語の途中で折り返さない（収まらない語だけ例外的に折る） */}
       <div
-        className={`mt-0.5 tabular-nums tracking-[-0.01em] ${emphasis ? "text-xl font-semibold" : "text-base font-semibold"}`}
+        className={`mt-0.5 break-keep break-words tabular-nums tracking-[-0.01em] ${emphasis ? "text-xl font-semibold" : "text-base font-semibold"}`}
         data-testid={testId}
       >
         {value}
         {unit && <span className="ml-0.5 text-xs font-normal text-muted-foreground">{unit}</span>}
       </div>
+      {note && (
+        <div
+          className="mt-0.5 text-[10px] leading-tight text-muted-foreground"
+          data-testid={testId ? `${testId}-note` : undefined}
+        >
+          {note}
+        </div>
+      )}
     </div>
   );
 }
@@ -69,6 +81,9 @@ export function RecipeSummary({ computed }: RecipeSummaryProps) {
               finishRange
                 ? `${formatTime(finishRange[0])}〜${formatTime(finishRange[1])}`
                 : formatTime(computed.estimatedFinishSec)
+            }
+            note={
+              !finishRange && recipe.reference.targetFinishIsAppDefault ? "アプリ既定値" : undefined
             }
             testId="summary-finish"
           />
