@@ -251,8 +251,8 @@ describe("1 投固定量型（長崎愛美 JBrC 2026）", () => {
 
   /**
    * どの豆量でも成り立つこと:
-   * 各投の合計＝湯量 / 開始時刻は 20 秒刻み / 1〜4 投目は 90℃・5 投目以降は 75℃ /
-   * 画像にない 8 投目以降だけが補完値 /
+   * 各投の合計＝湯量 / 開始時刻は 20 秒刻み / 1〜4投目は 90℃・5投目以降は 75℃ /
+   * 画像にない 8投目以降だけが補完値 /
    * 終了予定は最終投の開始 + 30 秒以上（計算は ちょうど + 30 秒）で、「抽出終了」の時刻と一致する
    */
   function expectInvariants(computed: Computed) {
@@ -320,11 +320,13 @@ describe("1 投固定量型（長崎愛美 JBrC 2026）", () => {
     expect(pours[pours.length - 1].startSec).toBe(120);
     expect(pours.map((s) => s.cumulativeWaterG)).toEqual([30, 60, 90, 120, 150, 180, 210]);
     expect(pours.map((s) => s.temperatureC)).toEqual([90, 90, 90, 90, 75, 75, 75]);
+    // 最終投は他のレシピと同じく「残りを注ぎきる」
+    expect(pours[6].step.instruction).toBe("最後の 1 投。75℃ のまま、残りを注ぎきる。");
     expect(computed.steps.some((s) => s.step.adaptation)).toBe(false);
     expect(computed.isArranged).toBe(false);
   });
 
-  it("1 投目は「蒸らし」ではなく、他の投と同じ 30g の通常の注湯", () => {
+  it("1投目は「蒸らし」ではなく、他の投と同じ 30g の通常の注湯", () => {
     const pours = poursOf(computeRecipe({ recipe, doseG: 17.5 }));
     expect(pours.map((s) => s.step.title)).toEqual([
       "1投目",
@@ -358,7 +360,7 @@ describe("1 投固定量型（長崎愛美 JBrC 2026）", () => {
     }
   });
 
-  it("8 投目以降の 75℃ は補完値とし、理由は 1 回だけ開示する", () => {
+  it("8投目以降の 75℃ は補完値とし、理由は 1 回だけ開示する", () => {
     const large = computeRecipe({ recipe, doseG: 35 }); // 14 投
     expect(
       poursOf(large)
@@ -366,7 +368,7 @@ describe("1 投固定量型（長崎愛美 JBrC 2026）", () => {
         .map((s) => s.step.id),
     ).toEqual(["pour-8", "pour-9", "pour-10", "pour-11", "pour-12", "pour-13", "pour-14"]);
     expect(large.supplementedNotes.filter((note) => note.includes("75℃ を続ける"))).toEqual([
-      "8投目: 画像は 7 投目（2:00）までのため、8 投目以降も 5〜7 投目と同じ 75℃ を続ける",
+      "8投目: 画像は 7投目（2:00）までのため、8投目以降も 5〜7投目と同じ 75℃ を続ける",
     ]);
     // データ側の補完であって、ユーザーによる変更ではない
     expect(large.isArranged).toBe(false);

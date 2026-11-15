@@ -23,7 +23,7 @@ import type { ComputedRecipe } from "@/domain/brew.types";
 export function RecipeSourceDialog({ computed }: { computed: ComputedRecipe }) {
   const { recipe } = computed;
   const { reference, metadata } = recipe;
-  // 同じ理由の補完が続く投（例: 8 投目以降の湯温）は、最初の投だけ載せる
+  // 同じ理由の補完が続く投（例: 8投目以降の湯温）は、最初の投だけ載せる
   const adaptedSteps = computed.steps.filter(
     (s, i, all) =>
       s.step.adaptation &&
@@ -81,7 +81,8 @@ export function RecipeSourceDialog({ computed }: { computed: ComputedRecipe }) {
               {reference.temperatureIsAppDefault && "（アプリ既定値）"}
             </dd>
             <dt className="text-muted-foreground">挽き目</dt>
-            <dd>
+            {/* 設定画面の挽き目と同じく、語の途中で折り返さない */}
+            <dd className="break-keep break-words">
               <GrindLabel text={reference.grind.label} />
               {reference.grind.isAppDefault && "（アプリ既定値）"}
             </dd>
@@ -124,7 +125,8 @@ export function RecipeSourceDialog({ computed }: { computed: ComputedRecipe }) {
                 href={metadata.sourceUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="mt-1 inline-block text-xs underline"
+                // 区切りのない長い URL がダイアログを押し広げないよう、どこでも折り返す
+                className="mt-1 inline-block break-all text-xs underline"
               >
                 {metadata.sourceUrl}
               </a>

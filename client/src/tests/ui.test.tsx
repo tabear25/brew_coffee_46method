@@ -100,13 +100,16 @@ describe("レシピ設定画面", () => {
     expect(grind).toHaveTextContent("中粗挽き〜粗め（コマンダンテ 35〜40クリック）");
     expect(within(grind).getByText("35〜40")).toHaveClass("whitespace-nowrap");
 
-    // 20g → 240g → 30g × 8 投（8 投目は 2:20）
+    // 20g → 240g → 30g × 8 投（8投目は 2:20）
     setDose("20");
     expect(screen.getByTestId("summary-total-water")).toHaveTextContent("240");
     await user.click(screen.getByTestId("start-brew"));
     expect(await screen.findByTestId("step-delta-pour-8")).toHaveTextContent("+30");
     expect(screen.getByTestId("step-cumulative-pour-8")).toHaveTextContent("累計 240g");
     expect(screen.getByTestId("step-time-pour-8")).toHaveTextContent("2:20");
+    // 注ぎ方の指定がない注湯も、注湯時間と同じく「レシピ指定なし」と出す
+    expect(screen.getByTestId("step-card-pour-1")).toHaveTextContent("注ぎ方レシピ指定なし");
+    expect(screen.getByTestId("step-card-pour-1")).toHaveTextContent("注湯時間レシピ指定なし");
   });
 
   it("推奨粉量範囲を外れるとエラーではなく警告が出る", async () => {
@@ -319,6 +322,8 @@ describe("総抽出時間がアプリ既定値から算出されるレシピ", (
     // 3. 出典ダイアログの「目標終了」（基準 17.5g での値）
     await user.click(screen.getByTestId("open-source-dialog"));
     expect(screen.getByText(`2:30（${MARK}）`)).toBeInTheDocument();
+    // 区切りのない長い URL でもダイアログを押し広げない
+    expect(screen.getByRole("link", { name: /prtimes\.jp/ })).toHaveClass("break-all");
     await user.keyboard("{Escape}");
 
     // 4. プレビューの見出し / 5. 終了ステップの目安
@@ -344,7 +349,7 @@ describe("総抽出時間がアプリ既定値から算出されるレシピ", (
     ["20", "pour-8", "2:20", "2:50"],
     ["30", "pour-12", "3:40", "4:10"],
   ])(
-    "豆量 %sg では最終投（%s）の開始 %s + 30 秒＝終了予定 %s が、すべての表示でそろう",
+    "豆量 %sg では最終投（%s）の開始 %s + 30 秒 = 終了予定 %s が、すべての表示でそろう",
     async (dose, lastPourId, lastPourStart, finish) => {
       vi.useFakeTimers({ shouldAdvanceTime: false });
       const user = setup({ fakeTimers: true });

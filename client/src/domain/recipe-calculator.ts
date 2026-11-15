@@ -319,7 +319,7 @@ export function computeRecipe(input: ComputeRecipeInput): ComputedRecipe {
 
   // データ側の補完は「ユーザーによる変更」とは区別して開示する
   const supplementedNotes: string[] = [];
-  // 同じ理由の補完が複数の投に続く場合（例: 8 投目以降の湯温）は、最初の投で 1 回だけ開示する
+  // 同じ理由の補完が複数の投に続く場合（例: 8投目以降の湯温）は、最初の投で 1 回だけ開示する
   const seenAdaptationNotes = new Set<string>();
   for (const step of core.resolved) {
     if (!step.adaptation) continue;

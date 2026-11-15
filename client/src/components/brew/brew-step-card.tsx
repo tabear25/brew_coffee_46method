@@ -132,7 +132,13 @@ export function BrewStepCard({
 
       {!compact && (
         <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 border-t border-border/60 pt-2.5 sm:grid-cols-3">
-          {step.pattern && <Field label="注ぎ方" value={PATTERN_LABELS[step.pattern]} />}
+          {/* 注ぎ方の指定がない注湯も、注湯時間と同じく「レシピ指定なし」と出す */}
+          {(step.pattern || isPour) && (
+            <Field
+              label="注ぎ方"
+              value={step.pattern ? PATTERN_LABELS[step.pattern] : "レシピ指定なし"}
+            />
+          )}
           {isPour && (
             <Field
               label="注湯時間"
