@@ -9,7 +9,13 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { BREWER_FAMILY_LABELS, SOURCE_TYPE_LABELS, flowStrengthLabel } from "@/lib/labels";
+import { GrindLabel } from "@/components/recipe/grind-label";
+import {
+  BREWER_FAMILY_LABELS,
+  FINISH_FROM_APP_DEFAULT,
+  SOURCE_TYPE_LABELS,
+  flowStrengthLabel,
+} from "@/lib/labels";
 import { formatTime } from "@/lib/format";
 import type { ComputedRecipe } from "@/domain/brew.types";
 
@@ -76,7 +82,7 @@ export function RecipeSourceDialog({ computed }: { computed: ComputedRecipe }) {
             </dd>
             <dt className="text-muted-foreground">挽き目</dt>
             <dd>
-              {reference.grind.label}
+              <GrindLabel text={reference.grind.label} />
               {reference.grind.isAppDefault && "（アプリ既定値）"}
             </dd>
             <dt className="text-muted-foreground">目標終了</dt>
@@ -84,7 +90,7 @@ export function RecipeSourceDialog({ computed }: { computed: ComputedRecipe }) {
               {reference.targetFinishRangeSec
                 ? `${formatTime(reference.targetFinishRangeSec[0])}〜${formatTime(reference.targetFinishRangeSec[1])}`
                 : formatTime(reference.targetFinishSec)}
-              {reference.targetFinishIsAppDefault && "（アプリ既定値）"}
+              {reference.targetFinishIsAppDefault && `（${FINISH_FROM_APP_DEFAULT}）`}
             </dd>
             {reference.doseRangeG && (
               <>

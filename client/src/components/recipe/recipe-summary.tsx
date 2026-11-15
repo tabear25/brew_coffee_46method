@@ -1,7 +1,9 @@
+import type { ReactNode } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { GrindLabel } from "@/components/recipe/grind-label";
 import { formatGrams, formatRatio, formatTime } from "@/lib/format";
-import { grindScaleLabel } from "@/lib/labels";
+import { FINISH_FROM_APP_DEFAULT, grindScaleLabel } from "@/lib/labels";
 import type { ComputedRecipe } from "@/domain/brew.types";
 
 function Metric({
@@ -13,9 +15,9 @@ function Metric({
   emphasis,
 }: {
   label: string;
-  value: string;
+  value: ReactNode;
   unit?: string;
-  /** 値の下に出す小さな注記（例: アプリ既定値） */
+  /** 値の下に出す小さな注記（例: アプリ既定値から算出） */
   note?: string;
   testId?: string;
   emphasis?: boolean;
@@ -74,7 +76,11 @@ export function RecipeSummary({ computed }: RecipeSummaryProps) {
             unit="℃"
             testId="summary-temperature"
           />
-          <Metric label="推奨挽き目" value={computed.grindLabel} testId="summary-grind" />
+          <Metric
+            label="推奨挽き目"
+            value={<GrindLabel text={computed.grindLabel} />}
+            testId="summary-grind"
+          />
           <Metric
             label="抽出時間の目安"
             value={
@@ -83,7 +89,9 @@ export function RecipeSummary({ computed }: RecipeSummaryProps) {
                 : formatTime(computed.estimatedFinishSec)
             }
             note={
-              !finishRange && recipe.reference.targetFinishIsAppDefault ? "アプリ既定値" : undefined
+              !finishRange && recipe.reference.targetFinishIsAppDefault
+                ? FINISH_FROM_APP_DEFAULT
+                : undefined
             }
             testId="summary-finish"
           />

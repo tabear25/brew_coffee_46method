@@ -82,7 +82,7 @@
 | `RecipeStep.adaptation` + `adaptationNote` | 注湯開始時刻などを一般に流通するタイムラインで補完した |
 | `reference.doseRangeIsAppDefault` | 推奨粉量範囲がアプリ既定値 |
 | `reference.temperatureIsAppDefault` / `grind.isAppDefault` | 湯温・挽き目がアプリ既定値 |
-| `reference.targetFinishIsAppDefault` | 目標終了（抽出時間の目安）がアプリ既定値 |
+| `reference.targetFinishIsAppDefault` | 目標終了（抽出時間の目安）がアプリ既定値。終了予定は落ち切り時間から算出し、表示は「アプリ既定値から算出」 |
 | `RecipeControlOption.adaptation` | その選択肢に数値根拠がない |
 
 同じ作者・同じメソッド名でも複数版があるため、**author だけをキーにせず一意な `id` と `version`** を持たせる。

@@ -7,6 +7,7 @@ import { RecipeSummary } from "@/components/recipe/recipe-summary";
 import { UnsupportedRangeWarning } from "@/components/recipe/unsupported-range-warning";
 import { useBrewStore } from "@/stores/brew-store";
 import { formatTime } from "@/lib/format";
+import { FINISH_FROM_APP_DEFAULT } from "@/lib/labels";
 
 export default function PreviewPage() {
   const [, navigate] = useLocation();
@@ -37,7 +38,7 @@ export default function PreviewPage() {
         <p className="text-xs text-muted-foreground tabular-nums" data-testid="preview-meta">
           豆 {computed.doseG}g ／ 湯 {computed.totalWaterG}g ／ {computed.temperatureC}℃ ／
           抽出終了予定 {formatTime(computed.estimatedFinishSec)}
-          {computed.recipe.reference.targetFinishIsAppDefault && "（アプリ既定値）"}
+          {computed.recipe.reference.targetFinishIsAppDefault && `（${FINISH_FROM_APP_DEFAULT}）`}
         </p>
       </header>
 

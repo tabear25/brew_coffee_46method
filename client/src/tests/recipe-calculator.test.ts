@@ -8,7 +8,9 @@ import {
 } from "@/domain/recipe-calculator";
 import { scheduledStartSec, shouldAdvance } from "@/domain/brew-progression";
 import { resolveSteps, withControlDefaults } from "@/domain/recipe.types";
+import { controlCombinations } from "@/domain/recipe-validator";
 import {
+  RECIPES,
   cafecOsmoticFlow,
   georgeHowellKalita,
   hoffmannBetterOneCup,
@@ -194,6 +196,27 @@ describe("出典の開示", () => {
     expect(plain.supplementedNotes.join()).toContain("推奨粉量範囲");
   });
 
+  it("同じ理由の補完を 1 回にまとめても、ほかのレシピの注記は変わらない", () => {
+    // まとめる処理が効くのは同じ注記の補完ステップが 2 つ以上あるときだけ（該当は長崎 JBrC 2026 のみ）
+    for (const recipe of RECIPES) {
+      if (recipe === nagasakiJbrc2026) continue;
+      const doses = [recipe.reference.doseG, ...(recipe.reference.doseRangeG ?? [])];
+      for (const controls of controlCombinations(recipe)) {
+        for (const doseG of doses) {
+          const computed = computeRecipe({ recipe, doseG, controls });
+          const everyAdaptedStep = computed.steps
+            .filter((s) => s.step.adaptation)
+            .map((s) => `${s.step.title}: ${s.step.adaptationNote ?? "調査レポート外の補完値"}`);
+          // まとめる前と同じく、補完ステップごとに 1 行ずつ並ぶ
+          expect(
+            computed.supplementedNotes.filter((note) => everyAdaptedStep.includes(note)),
+            `${recipe.id} ${doseG}g`,
+          ).toEqual(everyAdaptedStep);
+        }
+      }
+    }
+  });
+
   it("アレンジモードで上書きすると変更内容が列挙される", () => {
     const arranged = computeRecipe({
       recipe: kasuya46,
@@ -229,11 +252,19 @@ describe("1 投固定量型（長崎愛美 JBrC 2026）", () => {
   /**
    * どの豆量でも成り立つこと:
    * 各投の合計＝湯量 / 開始時刻は 20 秒刻み / 1〜4 投目は 90℃・5 投目以降は 75℃ /
-   * 画像にない 8 投目以降だけが補完値
+   * 画像にない 8 投目以降だけが補完値 /
+   * 終了予定は最終投の開始 + 30 秒以上（計算は ちょうど + 30 秒）で、「抽出終了」の時刻と一致する
    */
   function expectInvariants(computed: Computed) {
     const pours = poursOf(computed);
     const at = `${computed.doseG}g`;
+    const lastPourStart = pours[pours.length - 1].startSec as number;
+    const finishStep = computed.steps[computed.steps.length - 1];
+    expect(computed.estimatedFinishSec, at).toBeGreaterThanOrEqual(lastPourStart + 30);
+    expect(computed.estimatedFinishSec, at).toBe(lastPourStart + 30);
+    // 進捗表示は estimatedFinishSec を、「抽出終了」ステップは estimatedStartSec を表示する
+    expect(finishStep.step.type, at).toBe("finish");
+    expect(finishStep.estimatedStartSec, at).toBe(computed.estimatedFinishSec);
     expect(
       pours.reduce((sum, s) => sum + s.deltaWaterG, 0),
       at,
@@ -341,13 +372,23 @@ describe("1 投固定量型（長崎愛美 JBrC 2026）", () => {
     expect(large.isArranged).toBe(false);
   });
 
-  it("抽出時間の目安は投数に合わせて延び縮みし、アプリ既定値として開示する", () => {
-    const base = computeRecipe({ recipe, doseG: 17.5 });
-    // 最終投 2:00 ＋ 落ちきり 30 秒（アプリ既定値）
-    expect(base.estimatedFinishSec).toBe(150);
-    expect(base.supplementedNotes).toContain("抽出時間の目安（基準 2:30）はアプリ既定値");
-    expect(computeRecipe({ recipe, doseG: 20 }).estimatedFinishSec).toBe(170);
-    expect(computeRecipe({ recipe, doseG: 15 }).estimatedFinishSec).toBe(130);
+  it("終了予定は最終投の開始 + 30 秒で豆量に合わせて動き、算出元がアプリ既定値だと開示する", () => {
+    // [豆量, 最終投の開始, 終了予定]
+    const expected: [number, number, number][] = [
+      [15, 100, 130], // 1:40 → 2:10
+      [17.5, 120, 150], // 2:00 → 2:30（基準）
+      [20, 140, 170], // 2:20 → 2:50
+      [30, 220, 250], // 3:40 → 4:10
+    ];
+    for (const [doseG, lastPourStart, finish] of expected) {
+      const computed = computeRecipe({ recipe, doseG });
+      const pours = poursOf(computed);
+      expect(pours[pours.length - 1].startSec, `${doseG}g`).toBe(lastPourStart);
+      expect(computed.estimatedFinishSec, `${doseG}g`).toBe(finish);
+    }
+    expect(computeRecipe({ recipe, doseG: 17.5 }).supplementedNotes).toContain(
+      "抽出時間の目安は、最後の注湯から 30 秒で落ちきる想定（アプリ既定値）で算出（基準 2:30）",
+    );
   });
 
   it("アレンジで比率を変えても 1 投 30g のまま、投数で総湯量に合わせる", () => {

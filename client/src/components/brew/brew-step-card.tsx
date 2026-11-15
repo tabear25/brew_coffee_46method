@@ -3,6 +3,7 @@ import type { ComputedStep } from "@/domain/brew.types";
 import { formatGrams, formatTime } from "@/lib/format";
 import {
   AGITATION_INTENSITY_LABELS,
+  FINISH_FROM_APP_DEFAULT,
   PATTERN_LABELS,
   STEP_TYPE_LABELS,
   flowStrengthLabel,
@@ -16,7 +17,7 @@ export interface BrewStepCardProps {
   /** すでに終わったステップ */
   done?: boolean;
   compact?: boolean;
-  /** 目安時刻がアプリ既定値（目標終了）から出ている */
+  /** 目安時刻がアプリ既定値の落ち切り時間から算出されている */
   estimateIsAppDefault?: boolean;
 }
 
@@ -123,7 +124,7 @@ export function BrewStepCard({
               className="block text-[10px] text-muted-foreground"
               data-testid={`step-time-note-${step.id}`}
             >
-              アプリ既定値
+              {FINISH_FROM_APP_DEFAULT}
             </span>
           )}
         </span>

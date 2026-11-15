@@ -340,8 +340,9 @@ export function computeRecipe(input: ComputeRecipeInput): ComputedRecipe {
     supplementedNotes.push(`挽き目「${recipe.reference.grind.label}」はアプリ既定値`);
   }
   if (recipe.reference.targetFinishIsAppDefault) {
+    // 終了予定 = 最後の注湯 + 落ち切り時間。既定値なのは落ち切り時間（基準の目標終了 − 基準の最後の注湯）
     supplementedNotes.push(
-      `抽出時間の目安（基準 ${formatMinSec(recipe.reference.targetFinishSec)}）はアプリ既定値`,
+      `抽出時間の目安は、最後の注湯から ${referenceDrawdownSec(recipe)} 秒で落ちきる想定（アプリ既定値）で算出（基準 ${formatMinSec(recipe.reference.targetFinishSec)}）`,
     );
   }
 

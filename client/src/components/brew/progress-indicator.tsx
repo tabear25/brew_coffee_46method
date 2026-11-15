@@ -1,4 +1,5 @@
 import { formatTime, formatTimeSpoken } from "@/lib/format";
+import { FINISH_FROM_APP_DEFAULT } from "@/lib/labels";
 
 export interface ProgressIndicatorProps {
   /** 0〜1 */
@@ -7,7 +8,7 @@ export interface ProgressIndicatorProps {
   totalSteps: number;
   elapsedSec: number;
   estimatedFinishSec: number;
-  /** 抽出終了予定がアプリ既定値（目標終了）から出ている */
+  /** 抽出終了予定がアプリ既定値の落ち切り時間から算出されている */
   finishIsAppDefault?: boolean;
 }
 
@@ -44,7 +45,7 @@ export function ProgressIndicator({
         </span>
         <span data-testid="progress-finish">
           抽出終了予定 {formatTime(estimatedFinishSec)}
-          {finishIsAppDefault && "（アプリ既定値）"}
+          {finishIsAppDefault && `（${FINISH_FROM_APP_DEFAULT}）`}
         </span>
       </div>
       <span className="sr-only">経過 {formatTimeSpoken(elapsedSec)}</span>
