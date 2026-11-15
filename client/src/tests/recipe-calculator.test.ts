@@ -8,13 +8,16 @@ import {
 } from "@/domain/recipe-calculator";
 import { scheduledStartSec, shouldAdvance } from "@/domain/brew-progression";
 import { resolveSteps, withControlDefaults } from "@/domain/recipe.types";
+import { controlCombinations } from "@/domain/recipe-validator";
 import {
+  RECIPES,
   cafecOsmoticFlow,
   georgeHowellKalita,
   hoffmannBetterOneCup,
   kasuya46,
   lanceHedrick121,
   mattWintonFivePour,
+  nagasakiJbrc2026,
   scottRaoV60,
 } from "@/data/recipes";
 
@@ -193,6 +196,27 @@ describe("出典の開示", () => {
     expect(plain.supplementedNotes.join()).toContain("推奨粉量範囲");
   });
 
+  it("同じ理由の補完を 1 回にまとめても、ほかのレシピの注記は変わらない", () => {
+    // まとめる処理が効くのは同じ注記の補完ステップが 2 つ以上あるときだけ（該当は長崎 JBrC 2026 のみ）
+    for (const recipe of RECIPES) {
+      if (recipe === nagasakiJbrc2026) continue;
+      const doses = [recipe.reference.doseG, ...(recipe.reference.doseRangeG ?? [])];
+      for (const controls of controlCombinations(recipe)) {
+        for (const doseG of doses) {
+          const computed = computeRecipe({ recipe, doseG, controls });
+          const everyAdaptedStep = computed.steps
+            .filter((s) => s.step.adaptation)
+            .map((s) => `${s.step.title}: ${s.step.adaptationNote ?? "調査レポート外の補完値"}`);
+          // まとめる前と同じく、補完ステップごとに 1 行ずつ並ぶ
+          expect(
+            computed.supplementedNotes.filter((note) => everyAdaptedStep.includes(note)),
+            `${recipe.id} ${doseG}g`,
+          ).toEqual(everyAdaptedStep);
+        }
+      }
+    }
+  });
+
   it("アレンジモードで上書きすると変更内容が列挙される", () => {
     const arranged = computeRecipe({
       recipe: kasuya46,
@@ -216,6 +240,176 @@ describe("出典の開示", () => {
     });
     expect(original.totalWaterG).toBe(300);
     expect(original.isArranged).toBe(false);
+  });
+});
+
+describe("1 投固定量型（長崎愛美 JBrC 2026）", () => {
+  const recipe = nagasakiJbrc2026;
+  type Computed = ReturnType<typeof computeRecipe>;
+  const poursOf = (computed: Computed) => computed.steps.filter((s) => s.step.type === "pour");
+  const thirties = (count: number) => Array.from({ length: count }, () => 30);
+
+  /**
+   * どの豆量でも成り立つこと:
+   * 各投の合計＝湯量 / 開始時刻は 20 秒刻み / 1〜4投目は 90℃・5投目以降は 75℃ /
+   * 画像にない 8投目以降だけが補完値 /
+   * 終了予定は最終投の開始 + 30 秒以上（計算は ちょうど + 30 秒）で、「抽出終了」の時刻と一致する
+   */
+  function expectInvariants(computed: Computed) {
+    const pours = poursOf(computed);
+    const at = `${computed.doseG}g`;
+    const lastPourStart = pours[pours.length - 1].startSec as number;
+    const finishStep = computed.steps[computed.steps.length - 1];
+    expect(computed.estimatedFinishSec, at).toBeGreaterThanOrEqual(lastPourStart + 30);
+    expect(computed.estimatedFinishSec, at).toBe(lastPourStart + 30);
+    // 進捗表示は estimatedFinishSec を、「抽出終了」ステップは estimatedStartSec を表示する
+    expect(finishStep.step.type, at).toBe("finish");
+    expect(finishStep.estimatedStartSec, at).toBe(computed.estimatedFinishSec);
+    expect(
+      pours.reduce((sum, s) => sum + s.deltaWaterG, 0),
+      at,
+    ).toBe(computed.totalWaterG);
+    expect(
+      pours.map((s) => s.startSec),
+      at,
+    ).toEqual(pours.map((_, i) => i * 20));
+    expect(
+      pours.map((s) => s.temperatureC),
+      at,
+    ).toEqual(pours.map((_, i) => (i < 4 ? 90 : 75)));
+    expect(
+      pours.map((s) => s.step.adaptation === true),
+      at,
+    ).toEqual(pours.map((_, i) => i >= 7));
+  }
+
+  // [豆量, 総湯量, 各投の湯量]
+  const cases: [number, number, number[]][] = [
+    [17.5, 210, thirties(7)],
+    [15, 180, thirties(6)],
+    [20, 240, thirties(8)],
+    // 割り切れないケース: 投数は 湯量 ÷ 30 の四捨五入、端数は最終投で合わせる
+    [16, 192, [...thirties(5), 42]],
+    [17, 204, [...thirties(6), 24]],
+    [18, 216, [...thirties(6), 36]],
+    // 225g ÷ 30 = 7.5 ちょうどは四捨五入の境目。8 投・最終投 15g
+    [18.75, 225, [...thirties(7), 15]],
+    // 12g ÷ 30 = 0.4 は四捨五入で 0 投になるため、最低の 1 投にする
+    [1, 12, [12]],
+    // 豆量入力の上限
+    [200, 2400, thirties(80)],
+    // 指定された 9g / 35g と、推奨粉量範囲 15〜20g から決まる実際のスライダーの両端 10g / 30g
+    [9, 108, [...thirties(3), 18]],
+    [35, 420, thirties(14)],
+    [10, 120, thirties(4)],
+    [30, 360, thirties(12)],
+  ];
+
+  it.each(cases)("%sg → 湯量 %sg", (doseG, totalWaterG, deltas) => {
+    const computed = computeRecipe({ recipe, doseG });
+    expect(computed.totalWaterG).toBe(totalWaterG);
+    expect(pourDeltas(computed)).toEqual(deltas);
+    expectInvariants(computed);
+  });
+
+  it("基準 17.5g は 1:12・7 投・最終投 2:00・合計 210g で、出典どおりなので補完の印は付かない", () => {
+    const computed = computeRecipe({ recipe, doseG: 17.5 });
+    const pours = poursOf(computed);
+    expect(computed.ratio).toBe(12);
+    expect(pours).toHaveLength(7);
+    expect(pours[pours.length - 1].startSec).toBe(120);
+    expect(pours.map((s) => s.cumulativeWaterG)).toEqual([30, 60, 90, 120, 150, 180, 210]);
+    expect(pours.map((s) => s.temperatureC)).toEqual([90, 90, 90, 90, 75, 75, 75]);
+    // 最終投は他のレシピと同じく「残りを注ぎきる」
+    expect(pours[6].step.instruction).toBe("最後の 1 投。75℃ のまま、残りを注ぎきる。");
+    expect(computed.steps.some((s) => s.step.adaptation)).toBe(false);
+    expect(computed.isArranged).toBe(false);
+  });
+
+  it("1投目は「蒸らし」ではなく、他の投と同じ 30g の通常の注湯", () => {
+    const pours = poursOf(computeRecipe({ recipe, doseG: 17.5 }));
+    expect(pours.map((s) => s.step.title)).toEqual([
+      "1投目",
+      "2投目",
+      "3投目",
+      "4投目",
+      "5投目（75℃に切替）",
+      "6投目",
+      "7投目",
+    ]);
+    expect(pours[0].step.instruction).toBe(pours[1].step.instruction);
+    expect(pours[0].step.instruction).not.toContain("蒸らし");
+    // 注ぎ方は画像に記載がないので空けている
+    expect(pours.every((s) => s.step.pattern === undefined)).toBe(true);
+  });
+
+  it("0.1g 刻みのどの豆量でも、最終投以外は 30g、最終投は 15g 以上 45g 未満", () => {
+    for (let tenths = 10; tenths <= 400; tenths++) {
+      const computed = computeRecipe({ recipe, doseG: tenths / 10 });
+      const deltas = pourDeltas(computed);
+      const last = deltas[deltas.length - 1];
+      expectInvariants(computed);
+      expect(
+        deltas.slice(0, -1).every((d) => d === 30),
+        `${tenths / 10}g`,
+      ).toBe(true);
+      if (deltas.length > 1) {
+        expect(last, `${tenths / 10}g`).toBeGreaterThanOrEqual(15);
+        expect(last, `${tenths / 10}g`).toBeLessThan(45);
+      }
+    }
+  });
+
+  it("8投目以降の 75℃ は補完値とし、理由は 1 回だけ開示する", () => {
+    const large = computeRecipe({ recipe, doseG: 35 }); // 14 投
+    expect(
+      poursOf(large)
+        .filter((s) => s.step.adaptation)
+        .map((s) => s.step.id),
+    ).toEqual(["pour-8", "pour-9", "pour-10", "pour-11", "pour-12", "pour-13", "pour-14"]);
+    expect(large.supplementedNotes.filter((note) => note.includes("75℃ を続ける"))).toEqual([
+      "8投目: 画像は 7投目（2:00）までのため、8投目以降も 5〜7投目と同じ 75℃ を続ける",
+    ]);
+    // データ側の補完であって、ユーザーによる変更ではない
+    expect(large.isArranged).toBe(false);
+  });
+
+  it("終了予定は最終投の開始 + 30 秒で豆量に合わせて動き、算出元がアプリ既定値だと開示する", () => {
+    // [豆量, 最終投の開始, 終了予定]
+    const expected: [number, number, number][] = [
+      [15, 100, 130], // 1:40 → 2:10
+      [17.5, 120, 150], // 2:00 → 2:30（基準）
+      [20, 140, 170], // 2:20 → 2:50
+      [30, 220, 250], // 3:40 → 4:10
+    ];
+    for (const [doseG, lastPourStart, finish] of expected) {
+      const computed = computeRecipe({ recipe, doseG });
+      const pours = poursOf(computed);
+      expect(pours[pours.length - 1].startSec, `${doseG}g`).toBe(lastPourStart);
+      expect(computed.estimatedFinishSec, `${doseG}g`).toBe(finish);
+    }
+    expect(computeRecipe({ recipe, doseG: 17.5 }).supplementedNotes).toContain(
+      "抽出時間の目安は、最後の注湯から 30 秒で落ちきる想定（アプリ既定値）で算出（基準 2:30）",
+    );
+  });
+
+  it("アレンジで比率を変えても 1 投 30g のまま、投数で総湯量に合わせる", () => {
+    // 17.5g × 1:15 = 262.5 → 263g → 9 投（最後 23g）
+    const arranged = computeRecipe({
+      recipe,
+      doseG: 17.5,
+      mode: "arranged",
+      arrangement: { ratio: 15 },
+    });
+    expect(arranged.totalWaterG).toBe(263);
+    expect(pourDeltas(arranged)).toEqual([...thirties(8), 23]);
+    expect(arranged.arrangedReasons).toContain("比率を 1:15 に変更");
+  });
+
+  it("挽き目欄とメモに指定どおりの文言が入っている", () => {
+    expect(recipe.reference.grind.label).toBe("中粗挽き〜粗め（コマンダンテ 35〜40クリック）");
+    expect(recipe.metadata.notes).toContain("コマンダンテは上限48クリック");
+    expect(recipe.metadata.notes).toContain("フィルターはリンスする");
   });
 });
 

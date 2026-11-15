@@ -19,6 +19,12 @@ import {
   type RecipeWarning,
 } from "./brew.types";
 
+/** 注記用の m:ss 表記（ドメイン層は UI の format に依存しない） */
+function formatMinSec(seconds: number): string {
+  const safe = Math.max(0, Math.round(seconds));
+  return `${Math.floor(safe / 60)}:${(safe % 60).toString().padStart(2, "0")}`;
+}
+
 /** 丸め。step = 1 なら 1g 単位、0.5 なら 0.5g 単位 */
 export function roundTo(value: number, step: number): number {
   if (!Number.isFinite(value)) return 0;
@@ -146,7 +152,8 @@ function computeCore(
   totalWaterG: number,
   baseTemperatureC: number,
 ): CoreResult {
-  const resolved = resolveSteps(recipe, controls);
+  // 1 投固定量型のレシピは総湯量で投数が変わるため、実際の豆量・総湯量でステップを組む
+  const resolved = resolveSteps(recipe, controls, { doseG, totalWaterG });
   const cumulative = computeCumulativeTargets(
     resolved,
     totalWaterG,
@@ -312,10 +319,14 @@ export function computeRecipe(input: ComputeRecipeInput): ComputedRecipe {
 
   // データ側の補完は「ユーザーによる変更」とは区別して開示する
   const supplementedNotes: string[] = [];
+  // 同じ理由の補完が複数の投に続く場合（例: 8投目以降の湯温）は、最初の投で 1 回だけ開示する
+  const seenAdaptationNotes = new Set<string>();
   for (const step of core.resolved) {
-    if (step.adaptation) {
-      supplementedNotes.push(`${step.title}: ${step.adaptationNote ?? "調査レポート外の補完値"}`);
-    }
+    if (!step.adaptation) continue;
+    const note = step.adaptationNote ?? "調査レポート外の補完値";
+    if (seenAdaptationNotes.has(note)) continue;
+    seenAdaptationNotes.add(note);
+    supplementedNotes.push(`${step.title}: ${note}`);
   }
   if (recipe.reference.doseRangeIsAppDefault && recipe.reference.doseRangeG) {
     supplementedNotes.push(
@@ -327,6 +338,12 @@ export function computeRecipe(input: ComputeRecipeInput): ComputedRecipe {
   }
   if (recipe.reference.grind.isAppDefault) {
     supplementedNotes.push(`挽き目「${recipe.reference.grind.label}」はアプリ既定値`);
+  }
+  if (recipe.reference.targetFinishIsAppDefault) {
+    // 終了予定 = 最後の注湯 + 落ち切り時間。既定値なのは落ち切り時間（基準の目標終了 − 基準の最後の注湯）
+    supplementedNotes.push(
+      `抽出時間の目安は、最後の注湯から ${referenceDrawdownSec(recipe)} 秒で落ちきる想定（アプリ既定値）で算出（基準 ${formatMinSec(recipe.reference.targetFinishSec)}）`,
+    );
   }
 
   return {

@@ -9,7 +9,13 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { BREWER_FAMILY_LABELS, SOURCE_TYPE_LABELS, flowStrengthLabel } from "@/lib/labels";
+import { GrindLabel } from "@/components/recipe/grind-label";
+import {
+  BREWER_FAMILY_LABELS,
+  FINISH_FROM_APP_DEFAULT,
+  SOURCE_TYPE_LABELS,
+  flowStrengthLabel,
+} from "@/lib/labels";
 import { formatTime } from "@/lib/format";
 import type { ComputedRecipe } from "@/domain/brew.types";
 
@@ -17,7 +23,13 @@ import type { ComputedRecipe } from "@/domain/brew.types";
 export function RecipeSourceDialog({ computed }: { computed: ComputedRecipe }) {
   const { recipe } = computed;
   const { reference, metadata } = recipe;
-  const adaptedSteps = computed.steps.filter((s) => s.step.adaptation);
+  // 同じ理由の補完が続く投（例: 8投目以降の湯温）は、最初の投だけ載せる
+  const adaptedSteps = computed.steps.filter(
+    (s, i, all) =>
+      s.step.adaptation &&
+      all.findIndex((t) => t.step.adaptation && t.step.adaptationNote === s.step.adaptationNote) ===
+        i,
+  );
   const flowRates = Array.from(
     new Set(
       computed.steps
@@ -69,8 +81,9 @@ export function RecipeSourceDialog({ computed }: { computed: ComputedRecipe }) {
               {reference.temperatureIsAppDefault && "（アプリ既定値）"}
             </dd>
             <dt className="text-muted-foreground">挽き目</dt>
-            <dd>
-              {reference.grind.label}
+            {/* 設定画面の挽き目と同じく、語の途中で折り返さない */}
+            <dd className="break-keep break-words">
+              <GrindLabel text={reference.grind.label} />
               {reference.grind.isAppDefault && "（アプリ既定値）"}
             </dd>
             <dt className="text-muted-foreground">目標終了</dt>
@@ -78,6 +91,7 @@ export function RecipeSourceDialog({ computed }: { computed: ComputedRecipe }) {
               {reference.targetFinishRangeSec
                 ? `${formatTime(reference.targetFinishRangeSec[0])}〜${formatTime(reference.targetFinishRangeSec[1])}`
                 : formatTime(reference.targetFinishSec)}
+              {reference.targetFinishIsAppDefault && `（${FINISH_FROM_APP_DEFAULT}）`}
             </dd>
             {reference.doseRangeG && (
               <>
@@ -111,7 +125,8 @@ export function RecipeSourceDialog({ computed }: { computed: ComputedRecipe }) {
                 href={metadata.sourceUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="mt-1 inline-block text-xs underline"
+                // 区切りのない長い URL がダイアログを押し広げないよう、どこでも折り返す
+                className="mt-1 inline-block break-all text-xs underline"
               >
                 {metadata.sourceUrl}
               </a>

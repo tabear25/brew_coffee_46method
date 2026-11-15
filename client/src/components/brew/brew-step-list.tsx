@@ -18,6 +18,10 @@ export function BrewStepList({ computed, currentIndex, compact }: BrewStepListPr
             active={currentIndex === index}
             done={currentIndex !== undefined && index < currentIndex}
             compact={compact}
+            // 終了ステップの目安は目標終了から出すので、それがアプリ既定値なら印を出す
+            estimateIsAppDefault={
+              step.step.type === "finish" && computed.recipe.reference.targetFinishIsAppDefault
+            }
           />
         </li>
       ))}

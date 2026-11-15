@@ -2,17 +2,25 @@ import { HandMetal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ComputedStep } from "@/domain/brew.types";
 import { formatGrams, formatTime } from "@/lib/format";
+import { FINISH_FROM_APP_DEFAULT } from "@/lib/labels";
 
 export interface ManualConditionPromptProps {
   nextStep: ComputedStep;
   label: string;
   onConfirm: () => void;
+  /** 目安時刻がアプリ既定値の落ち切り時間から算出されている */
+  estimateIsAppDefault?: boolean;
 }
 
 /**
  * 排水状態や水位が条件のステップは自動で進めず、ユーザーの確認を待つ。
  */
-export function ManualConditionPrompt({ nextStep, label, onConfirm }: ManualConditionPromptProps) {
+export function ManualConditionPrompt({
+  nextStep,
+  label,
+  onConfirm,
+  estimateIsAppDefault,
+}: ManualConditionPromptProps) {
   return (
     <section
       className="rounded-xl border border-primary bg-primary/10 p-4"
@@ -31,7 +39,8 @@ export function ManualConditionPrompt({ nextStep, label, onConfirm }: ManualCond
             g）
           </>
         )}
-        。目安は {formatTime(nextStep.estimatedStartSec)} 前後です。
+        。目安は {formatTime(nextStep.estimatedStartSec)} 前後です
+        {estimateIsAppDefault && `（${FINISH_FROM_APP_DEFAULT}）`}。
       </p>
       <Button
         className="mt-3 min-h-[52px] w-full text-base"

@@ -17,8 +17,13 @@ export type BrewerFamily = "cone" | "flat_bottom" | "chemex";
 /** original = 作者本人の公開レシピ / official_partner = メーカー公式 / adaptation = 再現・翻案 */
 export type SourceType = "original" | "official_partner" | "adaptation";
 
-/** レシピの出自。researched = 調査レポート収録 / app = Brew Mate 独自 */
-export type RecipeGroup = "researched" | "app";
+/**
+ * レシピの出自。
+ *  - researched … 調査レポート収録
+ *  - external   … 調査レポート外の公開レシピ（大会・動画・記事など。出典は各レシピの metadata）
+ *  - app        … Brew Mate 独自
+ */
+export type RecipeGroup = "researched" | "external" | "app";
 
 export type StepType =
   "pour" | "wait" | "swirl" | "stir" | "manual_confirmation" | "remove_dripper" | "finish";
@@ -103,6 +108,8 @@ export interface RecipeReference {
   grind: GrindSpec;
   targetFinishSec: number;
   targetFinishRangeSec?: [number, number];
+  /** targetFinishSec が出典由来ではなくアプリ既定値であることを示す */
+  targetFinishIsAppDefault?: boolean;
   doseRangeG?: [number, number];
   /** doseRangeG がレポート由来ではなくアプリ既定値であることを示す */
   doseRangeIsAppDefault?: boolean;
@@ -162,6 +169,17 @@ export interface DeriveContext {
   roundingG: number;
 }
 
+/**
+ * buildSteps に渡す湯量の文脈。
+ * 1 投の湯量が固定で、投数が総湯量で決まるレシピ（例: 30g ずつ注ぐ）だけが使う。
+ * 湯量を割合で表すレシピは無視する（その場合の buildSteps は豆量に依存しない純粋関数のまま）。
+ */
+export interface StepBuildContext {
+  doseG: number;
+  /** 丸め済みの総湯量（g）。コントロールやアレンジによる比率の上書きも反映済み */
+  totalWaterG: number;
+}
+
 export interface RecipeMetadata {
   sourceTitle: string;
   sourceUrl?: string;
@@ -199,13 +217,17 @@ export interface Recipe {
   scaling: RecipeScaling;
   flavorControls?: FlavorControl[];
 
-  /** 既定（基準設定）のステップ列。buildSteps を持つレシピでは既定値での出力と一致させる */
+  /**
+   * 既定（基準設定）のステップ列。buildSteps を持つレシピでは、
+   * 既定コントロール・基準豆量での出力と一致させる。
+   */
   steps: RecipeStep[];
   /**
-   * 投数や配分がコントロールで変わるレシピ用のステップ生成関数。
-   * 湯量は「割合」で表すため豆量に依存しない = 純粋関数。
+   * 投数や配分が変わるレシピ用のステップ生成関数（純粋関数）。
+   *  - 湯量を「割合」で表すレシピは controls だけで決まり、豆量に依存しない。
+   *  - 1 投の湯量が固定のレシピは context.totalWaterG から投数を決める。
    */
-  buildSteps?: (controls: ControlValues) => RecipeStep[];
+  buildSteps?: (controls: ControlValues, context: StepBuildContext) => RecipeStep[];
   /** ミルク量・氷量など、湯量以外の派生値 */
   derive?: (ctx: DeriveContext) => DerivedValue[];
 
@@ -234,9 +256,16 @@ export function withControlDefaults(recipe: Recipe, controls?: ControlValues): C
   return { ...defaultControlValues(recipe), ...(controls ?? {}) };
 }
 
-/** 指定コントロールで実際に使うステップ列 */
-export function resolveSteps(recipe: Recipe, controls: ControlValues): RecipeStep[] {
-  return recipe.buildSteps ? recipe.buildSteps(controls) : recipe.steps;
+/** 指定コントロール・湯量で実際に使うステップ列（context を省略すると基準の豆量・湯量） */
+export function resolveSteps(
+  recipe: Recipe,
+  controls: ControlValues,
+  context: StepBuildContext = {
+    doseG: recipe.reference.doseG,
+    totalWaterG: recipe.reference.waterG,
+  },
+): RecipeStep[] {
+  return recipe.buildSteps ? recipe.buildSteps(controls, context) : recipe.steps;
 }
 
 /** 開始条件がユーザー確認を要するか（＝時間経過だけでは進行しない） */

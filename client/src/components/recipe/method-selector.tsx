@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { recipesByGroup } from "@/data/recipes";
-import { SOURCE_TYPE_LABELS } from "@/lib/labels";
+import { FINISH_FROM_APP_DEFAULT, SOURCE_TYPE_LABELS } from "@/lib/labels";
 import { formatTime } from "@/lib/format";
 import type { Recipe } from "@/domain/recipe.types";
 
@@ -63,6 +63,7 @@ function RecipeRow({
                 基準 {recipe.reference.doseG}g / {recipe.reference.waterG}g ・{" "}
                 {recipe.reference.temperatureC}℃ ・ 目安{" "}
                 {formatTime(recipe.reference.targetFinishSec)}
+                {recipe.reference.targetFinishIsAppDefault && `（${FINISH_FROM_APP_DEFAULT}）`}
               </span>
             </span>
           </span>
@@ -120,7 +121,8 @@ export function MethodSelector({
             <DialogHeader>
               <DialogTitle>抽出メソッドを選ぶ</DialogTitle>
               <DialogDescription>
-                調査レポート収録の 10 レシピと、Brew Mate 独自の 3 メソッドから選べます。
+                {groups.map((g) => `${g.label}（${g.recipes.length} 件）`).join("、")}
+                から選べます。
               </DialogDescription>
             </DialogHeader>
 

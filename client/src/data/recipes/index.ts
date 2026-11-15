@@ -11,11 +11,12 @@ import { cafecOsmoticFlow } from "./cafec-osmotic-flow";
 import { georgeHowellKalita } from "./george-howell-kalita";
 import { konoPointDrip } from "./kono-point-drip";
 import { blueBottleChemex } from "./blue-bottle-chemex";
+import { nagasakiJbrc2026 } from "./nagasaki-jbrc-2026";
 import { kasuya1010 } from "./kasuya-1010";
 import { cafeLatte } from "./cafe-latte";
 import { flashBrew } from "./flash-brew";
 
-/** 調査レポート収録の 10 レシピ ＋ Brew Mate 独自 3 メソッド */
+/** 調査レポート収録の 10 レシピ ＋ その他の公開レシピ 1 件 ＋ Brew Mate 独自 3 メソッド */
 export const RECIPES: Recipe[] = [
   kasuya46,
   hoffmannBetterOneCup,
@@ -27,6 +28,7 @@ export const RECIPES: Recipe[] = [
   georgeHowellKalita,
   konoPointDrip,
   blueBottleChemex,
+  nagasakiJbrc2026,
   kasuya1010,
   cafeLatte,
   flashBrew,
@@ -36,6 +38,7 @@ export const DEFAULT_RECIPE_ID = kasuya46.id;
 
 export const RECIPE_GROUP_LABELS: Record<RecipeGroup, string> = {
   researched: "調査レポート収録レシピ",
+  external: "その他の公開レシピ",
   app: "Brew Mate 独自メソッド",
 };
 
@@ -50,7 +53,7 @@ export function getRecipeOrDefault(id: string | undefined): Recipe {
 }
 
 export function recipesByGroup(): { group: RecipeGroup; label: string; recipes: Recipe[] }[] {
-  const groups: RecipeGroup[] = ["researched", "app"];
+  const groups: RecipeGroup[] = ["researched", "external", "app"];
   return groups.map((group) => ({
     group,
     label: RECIPE_GROUP_LABELS[group],
@@ -74,6 +77,7 @@ export {
   georgeHowellKalita,
   konoPointDrip,
   blueBottleChemex,
+  nagasakiJbrc2026,
   kasuya1010,
   cafeLatte,
   flashBrew,

@@ -3,6 +3,7 @@ import type { ComputedStep } from "@/domain/brew.types";
 import { formatGrams, formatTime } from "@/lib/format";
 import {
   AGITATION_INTENSITY_LABELS,
+  FINISH_FROM_APP_DEFAULT,
   PATTERN_LABELS,
   STEP_TYPE_LABELS,
   flowStrengthLabel,
@@ -16,6 +17,8 @@ export interface BrewStepCardProps {
   /** すでに終わったステップ */
   done?: boolean;
   compact?: boolean;
+  /** 目安時刻がアプリ既定値の落ち切り時間から算出されている */
+  estimateIsAppDefault?: boolean;
 }
 
 function Field({ label, value }: { label: string; value: React.ReactNode }) {
@@ -27,7 +30,13 @@ function Field({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
-export function BrewStepCard({ computed, active, done, compact }: BrewStepCardProps) {
+export function BrewStepCard({
+  computed,
+  active,
+  done,
+  compact,
+  estimateIsAppDefault,
+}: BrewStepCardProps) {
   const { step } = computed;
   const isPour = step.type === "pour";
   const flowLabel = flowStrengthLabel(step.flowRateGps);
@@ -110,12 +119,26 @@ export function BrewStepCard({ computed, active, done, compact }: BrewStepCardPr
           >
             {timeLabel}
           </span>
+          {estimateIsAppDefault && (
+            <span
+              className="block text-[10px] text-muted-foreground"
+              data-testid={`step-time-note-${step.id}`}
+            >
+              {FINISH_FROM_APP_DEFAULT}
+            </span>
+          )}
         </span>
       </header>
 
       {!compact && (
         <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 border-t border-border/60 pt-2.5 sm:grid-cols-3">
-          {step.pattern && <Field label="注ぎ方" value={PATTERN_LABELS[step.pattern]} />}
+          {/* 注ぎ方の指定がない注湯も、注湯時間と同じく「レシピ指定なし」と出す */}
+          {(step.pattern || isPour) && (
+            <Field
+              label="注ぎ方"
+              value={step.pattern ? PATTERN_LABELS[step.pattern] : "レシピ指定なし"}
+            />
+          )}
           {isPour && (
             <Field
               label="注湯時間"

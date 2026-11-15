@@ -40,6 +40,12 @@ export const SOURCE_TYPE_LABELS: Record<SourceType, string> = {
   adaptation: "再現・翻案",
 };
 
+/**
+ * 総抽出時間（終了予定）に付ける印。
+ * 終了予定は「最後の注湯 + 落ち切り時間（アプリ既定値）」で算出するため、値そのものではなく算出元が既定値。
+ */
+export const FINISH_FROM_APP_DEFAULT = "アプリ既定値から算出";
+
 export const BREWER_FAMILY_LABELS: Record<BrewerFamily, string> = {
   cone: "円錐（コーン）",
   flat_bottom: "フラットベッド",
