@@ -38,7 +38,8 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ["**/*.{js,css,html,png,svg,ico,woff2}"],
+        // wav: ステップ切り替え音（オフラインでも鳴らす）
+        globPatterns: ["**/*.{js,css,html,png,svg,ico,woff2,wav}"],
         cleanupOutdatedCaches: true,
         navigateFallback: "index.html",
       },
